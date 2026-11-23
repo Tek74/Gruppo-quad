@@ -892,14 +892,9 @@
                     </div>
                     <form onsubmit="handleSaveRide(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <input type="hidden" id="ride-edit-id" value="">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Titolo Giro *</label>
-                            <input type="text" id="ride-title" required placeholder="Es. Giro Colline Moreniche"
-                                   class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Data, Mese e Ora *</label>
-                            <input type="datetime-local" id="ride-datetime" required style="color-scheme: dark;"
+                        <div class="sm:col-span-2">
+                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Titolo Giro / Raduno *</label>
+                            <input type="text" id="ride-title" required placeholder="Es. Raduno 2 Giorni Colline Moreniche & Monte Baldo"
                                    class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
                         </div>
                         <div>
@@ -918,42 +913,53 @@
                                 <button type="submit" id="ride-submit-btn" class="px-4 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold cursor-pointer">Salva</button>
                             </div>
                         </div>
-                        <div class="sm:col-span-2 lg:col-span-4 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
+
+                        <!-- Sezione Giorni / Tappe Multiple (Data, Mese e Ora) -->
+                        <div class="sm:col-span-2 lg:col-span-4 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2.5">
                             <div class="flex flex-wrap items-center justify-between gap-2">
-                                <label for="ride-notes" class="block text-[11px] font-bold text-quad-400">
-                                    <i class="fa-solid fa-note-sticky mr-1"></i>Note Percorso / Equipaggiamento (opzionale)
+                                <label class="block text-[11px] font-bold text-quad-400">
+                                    <i class="fa-regular fa-calendar-days mr-1"></i>Date, Mesi e Orari di Uscita (anche più giorni) *
                                 </label>
-                                <div class="flex flex-wrap items-center gap-1.5">
-                                    <span class="text-[10px] text-stone-400">Suggerimenti rapidi:</span>
-                                    <button type="button" onclick="appendRideNoteChip('Barra LED')"
-                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
-                                        + Barra LED
-                                    </button>
-                                    <button type="button" onclick="appendRideNoteChip('Controllare i fari')"
-                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
-                                        + Controllare i fari
-                                    </button>
-                                    <button type="button" onclick="appendRideNoteChip('Fare il pieno')"
-                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
-                                        + Fare il pieno
-                                    </button>
-                                </div>
-                            </div>
-                            <textarea id="ride-notes" rows="2" maxlength="400" placeholder="Es. Barra LED, controllare i fari, fare il pieno prima della partenza..."
-                                      class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white placeholder-stone-500 focus:border-quad-500 focus:outline-none"></textarea>
-                        </div>
-                        <div class="sm:col-span-2 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <label class="block text-[11px] font-bold text-emerald-400">
-                                    <i class="fa-solid fa-file-pdf mr-1"></i>Programma in PDF (opzionale, max 1.5 MB)
-                                </label>
-                                <button type="button" id="ride-clear-pdf-btn" onclick="clearRidePdfInput()" class="hidden text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer">
-                                    <i class="fa-solid fa-xmark mr-0.5"></i>Rimuovi PDF
+                                <button type="button" onclick="addRideDateTimeRow()"
+                                        class="px-2.5 py-1 rounded-lg bg-quad-600 hover:bg-quad-500 text-white text-[10px] font-bold flex items-center gap-1 transition cursor-pointer">
+                                    <i class="fa-solid fa-plus"></i> Aggiungi Giorno / Tappa
                                 </button>
                             </div>
-                            <input type="file" id="ride-pdf-file" accept="application/pdf,.pdf" onchange="handleRidePdfUpload(event)"
+                            <div id="ride-datetimes-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+                        </div>
+
+                        <!-- Sezione Note Percorso & Equipaggiamento -->
+                        <div class="sm:col-span-2 lg:col-span-2 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
+                            <label for="ride-notes" class="block text-[11px] font-bold text-quad-400">
+                                <i class="fa-solid fa-note-sticky mr-1"></i>Note Percorso / Equipaggiamento (opzionale)
+                            </label>
+                            <textarea id="ride-notes" rows="3" maxlength="400" placeholder="Es. Barra LED obbligatoria, controllare i fari, fare il pieno prima della partenza..."
+                                      class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white placeholder-stone-500 focus:border-quad-500 focus:outline-none"></textarea>
+                        </div>
+
+                        <!-- Sezione Programma / Locandina (PDF oppure JPG/PNG) -->
+                        <div class="sm:col-span-2 lg:col-span-2 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <label for="ride-program-file" class="block text-[11px] font-bold text-emerald-400">
+                                    <i class="fa-solid fa-file-arrow-up mr-1"></i>Programma / Locandina (PDF o JPG/PNG, max 1.5 MB)
+                                </label>
+                                <button type="button" id="ride-clear-program-btn" onclick="clearRideProgramInput()" class="hidden text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer">
+                                    <i class="fa-solid fa-xmark mr-0.5"></i>Rimuovi File
+                                </button>
+                            </div>
+                            <input type="file" id="ride-program-file" accept="application/pdf,.pdf,image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png" onchange="handleRideProgramUpload(event)"
                                    class="w-full text-[11px] text-stone-300 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-stone-900 file:text-emerald-400 hover:file:bg-stone-700 cursor-pointer">
-                            <p id="ride-pdf-status-label" class="text-[11px] text-stone-400 truncate">Nessun file PDF selezionato</p>
+                            <div id="ride-program-preview-box" class="hidden items-center gap-2.5 bg-mud-950 border border-stone-700 rounded-xl p-2">
+                                <img id="ride-program-preview-img" src="" alt="Anteprima Programma" class="hidden w-12 h-12 rounded-lg object-cover border border-stone-700 shrink-0">
+                                <div id="ride-program-pdf-icon" class="hidden w-10 h-10 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-file-pdf text-base"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p id="ride-program-status-label" class="text-[11px] font-semibold text-stone-200 truncate">Nessun file selezionato</p>
+                                    <span id="ride-program-type-badge" class="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[9px] font-bold uppercase">Pronto</span>
+                                </div>
+                            </div>
+                            <p id="ride-program-empty-hint" class="text-[11px] text-stone-400 truncate">Nessun file PDF o JPG selezionato</p>
                         </div>
                     </form>
                 </div>
@@ -1781,9 +1787,9 @@
         let homeMapInstance = null;
         let homeMapMarker = null;
         let tempVehiclePhotoDataUrl = "";
-        let tempRidePosterDataUrl = "";
-        let tempRidePdfDataUrl = "";
-        let tempRidePdfName = "";
+        let tempRideProgramDataUrl = "";
+        let tempRideProgramType = ""; // 'pdf' | 'image' | ''
+        let tempRideProgramName = "";
         let tempListingPhotos = [];
         let listingActivePhotoIdx = {};
 
@@ -2054,10 +2060,14 @@
             if (!data || !Array.isArray(data.pilots) || data.pilots.length === 0) return false;
             if (isSavingRide || isCloudPushing || pendingPushTimer) return true;
 
+            const normalizedRemoteRides = Array.isArray(data.rides)
+                ? data.rides.filter(r => r && typeof r === 'object')
+                : (data.rides && typeof data.rides === 'object' ? Object.values(data.rides).filter(r => r && typeof r === 'object') : []);
+
             const incomingHash = JSON.stringify({
                 pilots: data.pilots,
                 listings: data.listings || [],
-                rides: data.rides || [],
+                rides: normalizedRemoteRides,
                 messages: data.messages || []
             });
 
@@ -2066,7 +2076,7 @@
 
             pilots = data.pilots;
             listings = Array.isArray(data.listings) ? data.listings : mergeCollectionById(listings, []);
-            rides = Array.isArray(data.rides) ? data.rides : mergeCollectionById(rides, []);
+            rides = normalizedRemoteRides.length > 0 ? normalizedRemoteRides : mergeCollectionById(rides, []);
             messages = Array.isArray(data.messages) ? data.messages : mergeCollectionById(messages, []);
 
             const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
@@ -3897,20 +3907,14 @@
                 return;
             }
 
-            const combinedPhotos = [...tempListingPhotos];
-            if (urlInput && !combinedPhotos.includes(urlInput) && combinedPhotos.length < 5) {
-                combinedPhotos.unshift(urlInput);
+            const finalPhotos = [...tempListingPhotos];
+            if (urlInput && finalPhotos.length < 5) {
+                finalPhotos.unshift(urlInput);
             }
-            const finalPhotos = combinedPhotos.filter(isSafeMediaUrl).slice(0, 5);
-            const finalPhoto = finalPhotos[0] || "";
 
             if (editId) {
                 const idx = listings.findIndex(l => l.id === editId);
-                const canManage = idx !== -1 && (listings[idx].authorId === me.id || isCurrentUserAdmin(me));
-                if (!canManage) {
-                    showToast("Operazione non consentita.", "error");
-                    return;
-                }
+                if (idx === -1) return;
                 listings[idx] = {
                     ...listings[idx],
                     title,
@@ -3918,13 +3922,13 @@
                     condition,
                     price,
                     negotiable,
-                    photo: finalPhoto,
                     photos: finalPhotos,
+                    photo: finalPhotos[0] || '',
                     description
                 };
                 showToast("Annuncio aggiornato con successo!");
             } else {
-                const newListing = {
+                const newItem = {
                     id: 'item_' + Date.now(),
                     authorId: me.id,
                     title,
@@ -3933,13 +3937,13 @@
                     price,
                     negotiable,
                     status: "Disponibile",
-                    photo: finalPhoto,
                     photos: finalPhotos,
+                    photo: finalPhotos[0] || '',
                     description,
                     createdAt: "Adesso"
                 };
-                listings.unshift(newListing);
-                showToast("Nuovo annuncio pubblicato nel Mercatino!");
+                listings.unshift(newItem);
+                showToast("Nuovo annuncio pubblicato nel mercatino!");
             }
 
             saveState();
@@ -3952,28 +3956,20 @@
             const me = getCurrentPilot();
             const item = listings.find(l => l.id === listingId);
             if (!me || !item || (item.authorId !== me.id && !isCurrentUserAdmin(me))) return;
-
             item.status = item.status === 'Venduto' ? 'Disponibile' : 'Venduto';
             saveState();
             renderMarketplace();
             renderDashboardData();
-            showToast(`Annuncio segnato come: ${item.status}`);
+            showToast(`Stato annuncio aggiornato in: ${item.status}`);
         }
 
         function confirmDeleteListing(listingId) {
             const me = getCurrentPilot();
             const item = listings.find(l => l.id === listingId);
-            if (!me || !item) return;
-            const isAuthor = item.authorId === me.id;
-            const amIAdmin = isCurrentUserAdmin(me);
-            if (!isAuthor && !amIAdmin) return;
-
-            const modalTitle = !isAuthor && amIAdmin
-                ? "Elimina Annuncio (Azione Amministratore)"
-                : "Elimina Annuncio";
+            if (!me || !item || (item.authorId !== me.id && !isCurrentUserAdmin(me))) return;
 
             showCustomConfirm(
-                modalTitle,
+                "Elimina Annuncio",
                 `Sei sicuro di voler eliminare definitivamente "${item.title}" dal mercatino?`,
                 () => {
                     listings = listings.filter(l => l.id !== listingId);
@@ -3985,29 +3981,97 @@
             );
         }
 
-        // ==================== USCITE & TRAIL ====================
         function formatRideDateTimeItalian(isoValue) {
             if (!isoValue) return '';
-            const parsed = new Date(isoValue);
-            if (isNaN(parsed.getTime())) return isoValue;
+            const d = new Date(isoValue);
+            if (isNaN(d.getTime())) return isoValue;
             const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
             const months = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-            const dayName = days[parsed.getDay()];
-            const dayNum = String(parsed.getDate()).padStart(2, '0');
-            const monthName = months[parsed.getMonth()];
-            const hours = String(parsed.getHours()).padStart(2, '0');
-            const minutes = String(parsed.getMinutes()).padStart(2, '0');
-            return `${dayName} ${dayNum} ${monthName} ${parsed.getFullYear()} • ${hours}:${minutes}`;
+            const dayName = days[d.getDay()];
+            const dayNum = String(d.getDate()).padStart(2, '0');
+            const monthName = months[d.getMonth()];
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            return `${dayName} ${dayNum} ${monthName} • ${hours}:${mins}`;
         }
 
-        function getDefaultNextSundayIso() {
+        function getDefaultNextSundayIso(offsetDays = 0) {
             const d = new Date();
             const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
-            d.setDate(d.getDate() + daysUntilSunday);
+            d.setDate(d.getDate() + daysUntilSunday + offsetDays);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
             return `${yyyy}-${mm}-${dd}T08:30`;
+        }
+
+        function getRideDateTimesArray(ride) {
+            if (!ride) return [];
+            if (Array.isArray(ride.dateTimesIso) && ride.dateTimesIso.length > 0) {
+                return ride.dateTimesIso.filter(Boolean);
+            }
+            if (ride.dateTimeIso) {
+                return [ride.dateTimeIso];
+            }
+            return [];
+        }
+
+        function renderRideDateTimeRows(initialValues = []) {
+            const listEl = document.getElementById('ride-datetimes-list');
+            if (!listEl) return;
+            const values = Array.isArray(initialValues) && initialValues.length > 0
+                ? initialValues
+                : [getDefaultNextSundayIso(0)];
+
+            listEl.innerHTML = '';
+            values.forEach((val, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-1.5 bg-mud-950 border border-stone-700 rounded-xl px-2.5 py-1.5';
+                row.innerHTML = `
+                    <span class="px-1.5 py-0.5 rounded bg-quad-500/20 text-quad-400 text-[10px] font-black shrink-0">Giorno ${idx + 1}</span>
+                    <input type="datetime-local" value="${escapeHtml(val)}" required style="color-scheme: dark;"
+                           class="ride-datetime-item flex-1 min-w-0 bg-transparent text-xs text-white focus:outline-none">
+                    ${values.length > 1 ? `
+                        <button type="button" onclick="removeRideDateTimeRow(${idx})" title="Rimuovi giorno"
+                                class="text-red-400 hover:text-red-300 px-1 text-xs cursor-pointer shrink-0">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    ` : ''}
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function getCurrentFormDateTimes() {
+            const inputs = Array.from(document.querySelectorAll('#ride-datetimes-list .ride-datetime-item'));
+            return inputs.map(inp => (inp.value || '').trim());
+        }
+
+        function addRideDateTimeRow() {
+            const current = getCurrentFormDateTimes();
+            let nextIso = getDefaultNextSundayIso(current.length);
+            const lastVal = current[current.length - 1];
+            if (lastVal) {
+                const parsed = new Date(lastVal);
+                if (!isNaN(parsed.getTime())) {
+                    parsed.setDate(parsed.getDate() + 1);
+                    const yyyy = parsed.getFullYear();
+                    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+                    const dd = String(parsed.getDate()).padStart(2, '0');
+                    const hh = String(parsed.getHours()).padStart(2, '0');
+                    const min = String(parsed.getMinutes()).padStart(2, '0');
+                    nextIso = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+                }
+            }
+            current.push(nextIso);
+            renderRideDateTimeRows(current);
+        }
+
+        function removeRideDateTimeRow(indexToRemove) {
+            const current = getCurrentFormDateTimes();
+            if (current.length <= 1) return;
+            current.splice(indexToRemove, 1);
+            renderRideDateTimeRows(current);
         }
 
         function buildGoogleMapsRideUrl(ride) {
@@ -4045,19 +4109,6 @@
             return 'bg-stone-800 text-stone-300 border border-stone-700';
         }
 
-        function appendRideNoteChip(chipText) {
-            const notesInput = document.getElementById('ride-notes');
-            if (!notesInput || !chipText) return;
-            const current = (notesInput.value || '').trim();
-            const parts = current ? current.split(',').map(p => p.trim().toLowerCase()) : [];
-            if (parts.includes(chipText.toLowerCase())) {
-                showToast(`"${chipText}" è già presente nelle note.`);
-                return;
-            }
-            notesInput.value = current ? `${current}, ${chipText}` : chipText;
-            notesInput.focus();
-        }
-
         function openNewRideForm(editRideId = null) {
             const me = getCurrentPilot();
             if (!me) return;
@@ -4066,7 +4117,6 @@
             const titleHeader = document.getElementById('ride-form-title');
             const editIdInput = document.getElementById('ride-edit-id');
             const titleInput = document.getElementById('ride-title');
-            const dtInput = document.getElementById('ride-datetime');
             const meetingInput = document.getElementById('ride-meeting');
             const diffSelect = document.getElementById('ride-difficulty');
             const notesInput = document.getElementById('ride-notes');
@@ -4083,23 +4133,28 @@
                     : '<i class="fa-solid fa-crown text-amber-400"></i> Modifica Uscita (Admin)';
                 editIdInput.value = ride.id;
                 titleInput.value = ride.title;
-                dtInput.value = ride.dateTimeIso || getDefaultNextSundayIso();
+                renderRideDateTimeRows(getRideDateTimesArray(ride));
                 meetingInput.value = ride.meeting;
                 diffSelect.value = ride.difficulty || 'Media - Bosco & Fango';
                 if (notesInput) notesInput.value = ride.notes || '';
-                setRidePosterFormState(ride.posterDataUrl || '', ride.posterName || 'locandina-uscita.jpg');
-                setRidePdfFormState(ride.pdfDataUrl || '', ride.pdfName || '');
+
+                if (ride.pdfDataUrl) {
+                    setRideProgramFormState(ride.pdfDataUrl, 'pdf', ride.pdfName || 'programma-uscita.pdf');
+                } else if (ride.posterDataUrl) {
+                    setRideProgramFormState(ride.posterDataUrl, 'image', ride.posterName || 'programma-uscita.jpg');
+                } else {
+                    setRideProgramFormState('', '', '');
+                }
                 submitBtn.textContent = 'Aggiorna';
             } else {
                 titleHeader.innerHTML = '<i class="fa-solid fa-calendar-plus text-quad-500"></i> Nuovo Percorso / Uscita Quad';
                 editIdInput.value = '';
                 titleInput.value = '';
-                dtInput.value = getDefaultNextSundayIso();
+                renderRideDateTimeRows([getDefaultNextSundayIso(0)]);
                 meetingInput.value = '';
                 diffSelect.value = 'Media - Bosco & Fango';
                 if (notesInput) notesInput.value = '';
-                setRidePosterFormState('', '');
-                setRidePdfFormState('', '');
+                setRideProgramFormState('', '', '');
                 submitBtn.textContent = 'Salva';
             }
 
@@ -4107,61 +4162,126 @@
             panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        function setRidePosterFormState(dataUrl, fileName = 'locandina-uscita.jpg') {
-            tempRidePosterDataUrl = (dataUrl && isSafeMediaUrl(dataUrl)) ? dataUrl : '';
-            const fileInput = document.getElementById('ride-poster-file');
-            const previewBox = document.getElementById('ride-poster-preview-box');
-            const previewImg = document.getElementById('ride-poster-preview-img');
-            const nameEl = document.getElementById('ride-poster-filename');
-            const clearBtn = document.getElementById('ride-clear-poster-btn');
+        function setRideProgramFormState(dataUrl, type = '', fileName = '') {
+            const cleanUrl = (dataUrl || '').trim();
+            const isPdf = type === 'pdf' && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(cleanUrl);
+            const isImg = type === 'image' && isSafeMediaUrl(cleanUrl);
 
-            if (!tempRidePosterDataUrl) {
+            tempRideProgramDataUrl = (isPdf || isImg) ? cleanUrl : '';
+            tempRideProgramType = isPdf ? 'pdf' : (isImg ? 'image' : '');
+            tempRideProgramName = tempRideProgramDataUrl
+                ? (fileName || (isPdf ? 'programma-uscita.pdf' : 'programma-uscita.jpg'))
+                : '';
+
+            const fileInput = document.getElementById('ride-program-file');
+            const previewBox = document.getElementById('ride-program-preview-box');
+            const previewImg = document.getElementById('ride-program-preview-img');
+            const pdfIcon = document.getElementById('ride-program-pdf-icon');
+            const statusEl = document.getElementById('ride-program-status-label');
+            const typeBadge = document.getElementById('ride-program-type-badge');
+            const emptyHint = document.getElementById('ride-program-empty-hint');
+            const clearBtn = document.getElementById('ride-clear-program-btn');
+
+            if (!tempRideProgramDataUrl) {
                 if (fileInput) fileInput.value = '';
                 if (previewBox) {
                     previewBox.classList.add('hidden');
                     previewBox.classList.remove('flex');
                 }
-                if (previewImg) previewImg.src = '';
+                if (previewImg) {
+                    previewImg.classList.add('hidden');
+                    previewImg.src = '';
+                }
+                if (pdfIcon) pdfIcon.classList.add('hidden');
+                if (emptyHint) emptyHint.classList.remove('hidden');
                 if (clearBtn) clearBtn.classList.add('hidden');
                 return;
             }
 
-            if (previewImg) previewImg.src = tempRidePosterDataUrl;
-            if (nameEl) nameEl.textContent = fileName || 'locandina-uscita.jpg';
+            if (emptyHint) emptyHint.classList.add('hidden');
             if (previewBox) {
                 previewBox.classList.remove('hidden');
                 previewBox.classList.add('flex');
             }
             if (clearBtn) clearBtn.classList.remove('hidden');
+            if (statusEl) statusEl.textContent = tempRideProgramName;
+
+            if (isImg) {
+                if (previewImg) {
+                    previewImg.src = tempRideProgramDataUrl;
+                    previewImg.classList.remove('hidden');
+                }
+                if (pdfIcon) pdfIcon.classList.add('hidden');
+                if (typeBadge) {
+                    typeBadge.textContent = 'Immagine JPG/PNG';
+                    typeBadge.className = 'inline-block mt-0.5 px-1.5 py-0.5 rounded bg-quad-500/20 text-quad-400 text-[9px] font-bold uppercase';
+                }
+            } else if (isPdf) {
+                if (previewImg) previewImg.classList.add('hidden');
+                if (pdfIcon) pdfIcon.classList.remove('hidden');
+                if (typeBadge) {
+                    typeBadge.textContent = 'Documento PDF';
+                    typeBadge.className = 'inline-block mt-0.5 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[9px] font-bold uppercase';
+                }
+            }
         }
 
-        function clearRidePosterInput() {
-            setRidePosterFormState('', '');
+        function clearRideProgramInput() {
+            setRideProgramFormState('', '', '');
         }
 
-        async function handleRidePosterUpload(event) {
+        async function handleRideProgramUpload(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
+
+            const lowerName = file.name.toLowerCase();
+            const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+            const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png)$/i.test(lowerName);
+
+            if (!isPdf && !isImage) {
+                showToast("Formato non supportato: carica un file PDF oppure un'immagine JPG / PNG.", "error");
+                event.target.value = '';
+                return;
+            }
+
+            if (isPdf) {
+                if (file.size > 1.5 * 1024 * 1024) {
+                    showToast("Il file PDF supera 1.5 MB: scegli un PDF più leggero per la sincronizzazione Cloud.", "error");
+                    event.target.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    setRideProgramFormState(ev.target.result || '', 'pdf', file.name);
+                    showToast(`Programma PDF "${file.name}" allegato all'uscita!`);
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
             try {
-                const compressed = await compressImageFileToDataUrl(file, 800, 0.72);
-                setRidePosterFormState(compressed, file.name);
-                showToast("Locandina caricata per l'uscita!");
+                const compressed = await compressImageFileToDataUrl(file, 900, 0.75);
+                const jpgName = lowerName.endsWith('.png')
+                    ? file.name.replace(/\.png$/i, '.jpg')
+                    : file.name;
+                setRideProgramFormState(compressed, 'image', jpgName);
+                showToast(`Programma immagine "${jpgName}" ottimizzato e caricato!`);
             } catch (e) {
-                showToast("Errore nel caricamento della locandina.", "error");
+                showToast("Errore nel caricamento dell'immagine JPG/PNG.", "error");
             }
         }
 
         function downloadRidePoster(rideId) {
             const ride = rides.find(r => r.id === rideId);
             if (!ride || !ride.posterDataUrl || !isSafeMediaUrl(ride.posterDataUrl)) {
-                showToast("Nessuna locandina disponibile per questa uscita.", "error");
+                showToast("Nessun programma JPG disponibile per questa uscita.", "error");
                 return;
             }
             try {
-                const safeBase = (ride.title || 'locandina-uscita')
+                const safeBase = (ride.title || 'programma-uscita')
                     .toLowerCase()
                     .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '') || 'locandina-uscita';
+                    .replace(/^-|-$/g, '') || 'programma-uscita';
                 const extMatch = ride.posterDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);/);
                 const ext = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'jpg';
                 const rawName = (ride.posterName || '').trim();
@@ -4174,55 +4294,10 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                showToast(`Download locandina avviato: ${fileName}`);
+                showToast(`Download programma avviato: ${fileName}`);
             } catch (err) {
-                showToast("Impossibile scaricare la locandina in questo browser.", "error");
+                showToast("Impossibile scaricare l'immagine in questo browser.", "error");
             }
-        }
-
-        function setRidePdfFormState(dataUrl, fileName = '') {
-            const isValidPdf = typeof dataUrl === 'string' && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(dataUrl.trim());
-            tempRidePdfDataUrl = isValidPdf ? dataUrl.trim() : '';
-            tempRidePdfName = isValidPdf ? (fileName || 'programma-uscita.pdf') : '';
-            const fileInput = document.getElementById('ride-pdf-file');
-            const statusEl = document.getElementById('ride-pdf-status-label');
-            const clearBtn = document.getElementById('ride-clear-pdf-btn');
-
-            if (!tempRidePdfDataUrl) {
-                if (fileInput) fileInput.value = '';
-                if (statusEl) statusEl.textContent = 'Nessun file PDF selezionato';
-                if (clearBtn) clearBtn.classList.add('hidden');
-                return;
-            }
-
-            if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-check-circle text-emerald-400 mr-1"></i>${escapeHtml(tempRidePdfName)}`;
-            if (clearBtn) clearBtn.classList.remove('hidden');
-        }
-
-        function clearRidePdfInput() {
-            setRidePdfFormState('', '');
-        }
-
-        function handleRidePdfUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-            if (!isPdf) {
-                showToast("Seleziona un file in formato PDF (.pdf).", "error");
-                event.target.value = '';
-                return;
-            }
-            if (file.size > 1.5 * 1024 * 1024) {
-                showToast("Il file PDF supera 1.5 MB: scegli un PDF più leggero per la sincronizzazione Cloud.", "error");
-                event.target.value = '';
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                setRidePdfFormState(ev.target.result || '', file.name);
-                showToast(`Programma PDF "${file.name}" allegato all'uscita!`);
-            };
-            reader.readAsDataURL(file);
         }
 
         function downloadRidePdf(rideId) {
@@ -4246,7 +4321,7 @@
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                showToast(`Download avviato: ${fileName}`);
+                showToast(`Download programma avviato: ${fileName}`);
             } catch (err) {
                 showToast("Impossibile scaricare il PDF in questo browser.", "error");
             }
@@ -4255,8 +4330,7 @@
         function closeRideForm() {
             const panel = document.getElementById('new-ride-panel');
             if (panel) panel.classList.add('hidden');
-            setRidePosterFormState('', '');
-            setRidePdfFormState('', '');
+            setRideProgramFormState('', '', '');
         }
 
         function handleSaveRide(e) {
@@ -4269,13 +4343,28 @@
                 const formEl = e.currentTarget || e.target;
                 const editId = (document.getElementById('ride-edit-id')?.value || '').trim();
                 const title = (document.getElementById('ride-title')?.value || '').trim();
-                const dateTimeIso = document.getElementById('ride-datetime')?.value || '';
-                const formattedDate = formatRideDateTimeItalian(dateTimeIso);
+                const dateTimesIso = getCurrentFormDateTimes().filter(Boolean);
+                if (dateTimesIso.length === 0) {
+                    showToast("Seleziona almeno una data e ora di uscita.", "error");
+                    return;
+                }
+                const firstDateTimeIso = dateTimesIso[0];
+                const formattedDates = dateTimesIso.map(formatRideDateTimeItalian);
+                const formattedDateSummary = formattedDates.join(' | ');
                 const meetingVal = (document.getElementById('ride-meeting')?.value || '').trim();
                 const difficulty = document.getElementById('ride-difficulty')?.value || 'Media - Bosco & Fango';
                 const notes = (document.getElementById('ride-notes')?.value || '').trim();
-                const posterName = (document.getElementById('ride-poster-filename')?.textContent || 'locandina-uscita.jpg').trim();
                 const coordMatch = meetingVal.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+
+                const isImgProg = tempRideProgramType === 'image' && Boolean(tempRideProgramDataUrl);
+                const isPdfProg = tempRideProgramType === 'pdf' && Boolean(tempRideProgramDataUrl);
+
+                const programFields = {
+                    posterDataUrl: isImgProg ? tempRideProgramDataUrl : '',
+                    posterName: isImgProg ? (tempRideProgramName || 'programma-uscita.jpg') : '',
+                    pdfDataUrl: isPdfProg ? tempRideProgramDataUrl : '',
+                    pdfName: isPdfProg ? (tempRideProgramName || 'programma-uscita.pdf') : ''
+                };
 
                 if (editId) {
                     const idx = rides.findIndex(r => r.id === editId);
@@ -4286,24 +4375,22 @@
                     rides[idx] = {
                         ...rides[idx],
                         title,
-                        date: formattedDate,
-                        dateTimeIso,
+                        date: formattedDateSummary,
+                        dateTimeIso: firstDateTimeIso,
+                        dateTimesIso,
                         meeting: meetingVal,
                         lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
                         lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
                         difficulty,
                         notes,
-                        posterDataUrl: tempRidePosterDataUrl || '',
-                        posterName: tempRidePosterDataUrl ? posterName : '',
-                        pdfDataUrl: tempRidePdfDataUrl || '',
-                        pdfName: tempRidePdfDataUrl ? (tempRidePdfName || 'programma-uscita.pdf') : ''
+                        ...programFields
                     };
                     showToast("Uscita modificata e aggiornata per il gruppo!");
                 } else {
                     const duplicateRecent = rides.some(r =>
                         r.authorId === me.id &&
                         r.title === title &&
-                        (r.dateTimeIso || '') === dateTimeIso &&
+                        (r.dateTimeIso || '') === firstDateTimeIso &&
                         (r.meeting || '') === meetingVal
                     );
                     if (duplicateRecent) {
@@ -4318,17 +4405,15 @@
                         id: uniqueId,
                         authorId: me.id,
                         title,
-                        date: formattedDate,
-                        dateTimeIso,
+                        date: formattedDateSummary,
+                        dateTimeIso: firstDateTimeIso,
+                        dateTimesIso,
                         meeting: meetingVal,
                         lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
                         lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
                         difficulty,
                         notes,
-                        posterDataUrl: tempRidePosterDataUrl || '',
-                        posterName: tempRidePosterDataUrl ? posterName : '',
-                        pdfDataUrl: tempRidePdfDataUrl || '',
-                        pdfName: tempRidePdfDataUrl ? (tempRidePdfName || 'programma-uscita.pdf') : '',
+                        ...programFields,
                         participants: [me.id]
                     };
                     rides.unshift(newRide);
@@ -4370,16 +4455,14 @@
         function confirmDeleteRide(rideId) {
             const me = getCurrentPilot();
             const ride = rides.find(r => r.id === rideId);
-            if (!me || !ride || !canEditRide(ride, me)) return;
-
-            const isAuthor = ride.authorId === me.id;
-            const modalTitle = !isAuthor && isCurrentUserAdmin(me)
-                ? "Elimina Uscita (Azione Amministratore)"
-                : "Elimina Uscita";
+            if (!me || !ride || !canEditRide(ride, me)) {
+                showToast("Non hai i permessi per eliminare questa uscita.", "error");
+                return;
+            }
 
             showCustomConfirm(
-                modalTitle,
-                `Sei sicuro di voler eliminare l'uscita "${ride.title}"?`,
+                "Elimina Uscita",
+                `Sei sicuro di voler eliminare definitivamente "${ride.title}" dal calendario uscite?`,
                 () => {
                     rides = rides.filter(r => r.id !== rideId);
                     saveState();
@@ -4389,6 +4472,19 @@
             );
         }
 
+        function getRideEarliestTimestamp(ride) {
+            if (!ride) return Number.MAX_SAFE_INTEGER;
+            const isoList = getRideDateTimesArray(ride);
+            let minTs = Number.MAX_SAFE_INTEGER;
+            isoList.forEach(iso => {
+                const t = new Date(iso).getTime();
+                if (!isNaN(t) && t < minTs) {
+                    minTs = t;
+                }
+            });
+            return minTs;
+        }
+
         function renderRides() {
             const container = document.getElementById('rides-list-container');
             if (!container) return;
@@ -4396,7 +4492,27 @@
             const amIAdmin = isCurrentUserAdmin(me);
             container.innerHTML = '';
 
-            rides.forEach(ride => {
+            const safeRidesList = Array.isArray(rides) ? rides.filter(r => r && typeof r === 'object') : [];
+
+            if (safeRidesList.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-mud-900 border border-stone-800 rounded-3xl p-8 text-center space-y-2">
+                        <i class="fa-solid fa-route text-3xl text-stone-600"></i>
+                        <p class="text-sm font-bold text-stone-300">Nessuna uscita in programma al momento</p>
+                        <p class="text-xs text-stone-500">Clicca su "Proponi Uscita" in alto a destra per creare il prossimo giro!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedRides = [...safeRidesList].sort((a, b) => {
+                const timeA = getRideEarliestTimestamp(a);
+                const timeB = getRideEarliestTimestamp(b);
+                if (timeA !== timeB) return timeA - timeB;
+                return String(a.title || '').localeCompare(String(b.title || ''));
+            });
+
+            sortedRides.forEach(ride => {
                 const author = pilots.find(p => p.id === ride.authorId) || { name: "Pilota Squadra" };
                 const isAuthor = me && ride.authorId === me.id;
                 const canManageRide = canEditRide(ride, me);
@@ -4405,17 +4521,31 @@
                 const gMapsUrl = buildGoogleMapsRideUrl(ride);
 
                 const safeId = escapeHtml(ride.id);
-                const safeTitle = escapeHtml(ride.title);
-                const safeDate = escapeHtml(ride.date);
-                const safeMeeting = escapeHtml(ride.meeting);
+                const safeTitle = escapeHtml(ride.title || 'Uscita Quad');
+                const rideIsoList = getRideDateTimesArray(ride);
+                const formattedDatesList = rideIsoList.length > 0
+                    ? rideIsoList.map(formatRideDateTimeItalian)
+                    : (ride.date ? [String(ride.date)] : []);
+                const safeMeeting = escapeHtml(ride.meeting || 'Da definire');
                 const safeDifficulty = escapeHtml(ride.difficulty || 'Media');
                 const difficultyBadgeClass = getDifficultyBadgeClass(ride.difficulty);
-                const safeNotes = escapeHtml((ride.notes || '').trim());
+                const safeNotes = escapeHtml(String(ride.notes || '').trim());
                 const safeAuthor = escapeHtml(author.name);
                 const hasPoster = Boolean(ride.posterDataUrl && isSafeMediaUrl(ride.posterDataUrl));
                 const safePosterUrl = hasPoster ? escapeHtml(ride.posterDataUrl) : '';
-                const hasPdf = Boolean(ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(ride.pdfDataUrl.trim()));
+                const safePosterName = escapeHtml(ride.posterName || 'programma-uscita.jpg');
+                const hasPdf = Boolean(ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(String(ride.pdfDataUrl).trim()));
                 const safePdfName = escapeHtml(ride.pdfName || 'programma-uscita.pdf');
+
+                const datesHtml = formattedDatesList.length > 1
+                    ? `<div class="flex flex-wrap gap-1.5 mt-1">
+                        ${formattedDatesList.map((dStr, idx) => `
+                            <span class="px-2 py-0.5 rounded-lg bg-quad-500/15 border border-quad-500/30 text-[11px] font-bold text-quad-300">
+                                <i class="fa-regular fa-calendar mr-1"></i>Giorno ${idx + 1}: ${escapeHtml(dStr)}
+                            </span>
+                        `).join('')}
+                       </div>`
+                    : `<span class="text-[11px] font-bold text-quad-400"><i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(formattedDatesList[0] || '')}</span>`;
 
                 const participantChips = participants.map(pid => {
                     const p = pilots.find(item => item.id === pid);
@@ -4433,18 +4563,19 @@
                             <img src="${safePosterUrl}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="${safeTitle}"
                                  class="w-full h-44 object-cover">
                             <button type="button" onclick="downloadRidePoster('${safeId}')"
-                                    class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl bg-black/80 hover:bg-quad-600 text-white text-[11px] font-bold border border-stone-700 flex items-center gap-1.5 transition cursor-pointer">
-                                <i class="fa-solid fa-download"></i> Scarica Locandina
+                                    class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl bg-black/85 hover:bg-quad-600 text-white text-[11px] font-bold border border-stone-700 flex items-center gap-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-download"></i> Scarica Programma (JPG)
                             </button>
                         </div>` : ''}
                         <div class="flex items-start justify-between gap-2">
-                            <div>
+                            <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-1.5 mb-1">
-                                    <span class="text-[11px] font-bold text-quad-400"><i class="fa-regular fa-calendar mr-1"></i>${safeDate}</span>
                                     ${isAuthor ? '<span class="px-2 py-0.5 rounded bg-quad-600 text-[9px] font-black text-white uppercase">Creata da Te</span>' : ''}
                                     ${!isAuthor && amIAdmin ? '<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-black uppercase"><i class="fa-solid fa-crown mr-0.5"></i>Admin</span>' : ''}
+                                    ${formattedDatesList.length > 1 ? `<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-500/40 text-sky-300 text-[9px] font-black uppercase">${formattedDatesList.length} Giorni</span>` : ''}
                                 </div>
-                                <h3 class="text-base font-bold text-white">${safeTitle}</h3>
+                                ${datesHtml}
+                                <h3 class="text-base font-bold text-white mt-1">${safeTitle}</h3>
                             </div>
                             <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${difficultyBadgeClass}">${safeDifficulty}</span>
                         </div>
@@ -4467,7 +4598,19 @@
                             </div>
                             <button type="button" onclick="downloadRidePdf('${safeId}')"
                                     class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer">
-                                <i class="fa-solid fa-download"></i> Scarica PDF
+                                <i class="fa-solid fa-download"></i> Scarica Programma (PDF)
+                            </button>
+                        </div>` : ''}
+
+                        ${hasPoster ? `
+                        <div class="bg-mud-950/90 border border-quad-500/30 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-image text-quad-400 text-sm shrink-0"></i>
+                                <span class="text-[11px] font-semibold text-stone-200 truncate">${safePosterName}</span>
+                            </div>
+                            <button type="button" onclick="downloadRidePoster('${safeId}')"
+                                    class="px-2.5 py-1 rounded-lg bg-quad-600 hover:bg-quad-500 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer">
+                                <i class="fa-solid fa-download"></i> Scarica Programma (JPG)
                             </button>
                         </div>` : ''}
 
