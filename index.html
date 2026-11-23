@@ -918,21 +918,29 @@
                                 <button type="submit" id="ride-submit-btn" class="px-4 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold cursor-pointer">Salva</button>
                             </div>
                         </div>
-                        <div class="sm:col-span-2 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <label class="block text-[11px] font-bold text-quad-400">
-                                    <i class="fa-solid fa-image mr-1"></i>Foto Locandina (opzionale, max ~550 KB)
+                        <div class="sm:col-span-2 lg:col-span-4 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label for="ride-notes" class="block text-[11px] font-bold text-quad-400">
+                                    <i class="fa-solid fa-note-sticky mr-1"></i>Note Percorso / Equipaggiamento (opzionale)
                                 </label>
-                                <button type="button" id="ride-clear-poster-btn" onclick="clearRidePosterInput()" class="hidden text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer">
-                                    <i class="fa-solid fa-xmark mr-0.5"></i>Rimuovi locandina
-                                </button>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="text-[10px] text-stone-400">Suggerimenti rapidi:</span>
+                                    <button type="button" onclick="appendRideNoteChip('Barra LED')"
+                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
+                                        + Barra LED
+                                    </button>
+                                    <button type="button" onclick="appendRideNoteChip('Controllare i fari')"
+                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
+                                        + Controllare i fari
+                                    </button>
+                                    <button type="button" onclick="appendRideNoteChip('Fare il pieno')"
+                                            class="px-2 py-0.5 rounded-lg bg-stone-900 hover:bg-quad-600 text-stone-200 hover:text-white border border-stone-700 text-[10px] font-semibold transition cursor-pointer">
+                                        + Fare il pieno
+                                    </button>
+                                </div>
                             </div>
-                            <input type="file" id="ride-poster-file" accept="image/*" onchange="handleRidePosterUpload(event)"
-                                   class="w-full text-[11px] text-stone-300 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-stone-900 file:text-quad-400 hover:file:bg-stone-700 cursor-pointer">
-                            <div id="ride-poster-preview-box" class="hidden items-center gap-3 pt-1">
-                                <img id="ride-poster-preview-img" src="" alt="Anteprima Locandina" class="w-16 h-16 rounded-lg object-cover border border-quad-500/60 shrink-0">
-                                <span id="ride-poster-filename" class="text-[11px] text-stone-300 truncate">Locandina caricata</span>
-                            </div>
+                            <textarea id="ride-notes" rows="2" maxlength="400" placeholder="Es. Barra LED, controllare i fari, fare il pieno prima della partenza..."
+                                      class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white placeholder-stone-500 focus:border-quad-500 focus:outline-none"></textarea>
                         </div>
                         <div class="sm:col-span-2 bg-mud-800/70 border border-stone-700/80 rounded-xl p-3 space-y-2">
                             <div class="flex items-center justify-between gap-2">
@@ -1728,6 +1736,19 @@
                 difficulty: "Hard - Fango Profondo & Roccia",
                 notes: "Obbligatorie barre LED ausiliarie, abbigliamento pesante e strops di recupero.",
                 participants: ["pilot_marco", "pilot_andrea"]
+            },
+            {
+                id: "ride_3",
+                authorId: "pilot_luca",
+                title: "Passeggiata Panoramica Argini & Sterrato",
+                date: "Dom 13 Dic • 09:15",
+                dateTimeIso: "2026-12-13T09:15",
+                meeting: "Borghetto sul Mincio (VR)",
+                lat: 45.3468,
+                lng: 10.7224,
+                difficulty: "Facile - Sterrato",
+                notes: "Percorso scorrevole adatto a tutti i mezzi e ai nuovi piloti.",
+                participants: ["pilot_luca", "pilot_nicola"]
             }
         ];
 
@@ -2097,12 +2118,10 @@
                 const res = await fetch(endpoint, { method: 'GET', cache: 'no-store' });
                 if (res.status === 401 || res.status === 403) {
                     updateCloudStatusUI(false, 'Accesso Negato');
-                    showToast("Accesso negato: imposta .read: true e .write: true nelle Regole di Firebase.", "error");
                     return;
                 }
                 if (res.status === 404) {
                     updateCloudStatusUI(false, 'DB Non Trovato');
-                    showToast("Database non trovato (404): verifica Realtime Database e URL.", "error");
                     return;
                 }
                 if (!res.ok) {
@@ -2135,13 +2154,7 @@
                     } catch (e) {}
                 }, 6000);
             } catch (err) {
-                if (err && err.message === 'permission_denied') {
-                    updateCloudStatusUI(false, 'Accesso Negato');
-                    showToast("Accesso negato: imposta .read: true e .write: true nelle Regole di Firebase.", "error");
-                } else {
-                    updateCloudStatusUI(false, 'Errore Rete / URL');
-                    showToast("Impossibile raggiungere l'URL Firebase: controlla che termini con .firebasedatabase.app", "error");
-                }
+                updateCloudStatusUI(false, 'Solo Locale');
             }
         }
 
@@ -2182,12 +2195,7 @@
                         isRestFallbackActive = true;
                         onSuccess();
                     })
-                    .catch((err) => {
-                        if (err && err.message === 'permission_denied') {
-                            updateCloudStatusUI(false, 'Accesso Negato');
-                            showToast("Accesso negato: verifica le Regole JSON su Firebase.", "error");
-                        }
-                    })
+                    .catch(() => {})
                     .finally(() => { isCloudPushing = false; });
             }
         }
@@ -4022,6 +4030,34 @@
             return ride.authorId === me.id || isCurrentUserAdmin(me);
         }
 
+        // Restituisce le classi Tailwind del badge difficoltà: Verde (Facile), Arancione (Media), Rosso (Difficile / Hard)
+        function getDifficultyBadgeClass(difficultyText) {
+            const normalized = (difficultyText || '').toLowerCase();
+            if (normalized.includes('facile')) {
+                return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+            }
+            if (normalized.includes('media')) {
+                return 'bg-orange-500/20 text-orange-300 border border-orange-500/40';
+            }
+            if (normalized.includes('difficile') || normalized.includes('hard')) {
+                return 'bg-red-500/20 text-red-300 border border-red-500/40';
+            }
+            return 'bg-stone-800 text-stone-300 border border-stone-700';
+        }
+
+        function appendRideNoteChip(chipText) {
+            const notesInput = document.getElementById('ride-notes');
+            if (!notesInput || !chipText) return;
+            const current = (notesInput.value || '').trim();
+            const parts = current ? current.split(',').map(p => p.trim().toLowerCase()) : [];
+            if (parts.includes(chipText.toLowerCase())) {
+                showToast(`"${chipText}" è già presente nelle note.`);
+                return;
+            }
+            notesInput.value = current ? `${current}, ${chipText}` : chipText;
+            notesInput.focus();
+        }
+
         function openNewRideForm(editRideId = null) {
             const me = getCurrentPilot();
             if (!me) return;
@@ -4033,6 +4069,7 @@
             const dtInput = document.getElementById('ride-datetime');
             const meetingInput = document.getElementById('ride-meeting');
             const diffSelect = document.getElementById('ride-difficulty');
+            const notesInput = document.getElementById('ride-notes');
             const submitBtn = document.getElementById('ride-submit-btn');
 
             if (editRideId) {
@@ -4049,6 +4086,7 @@
                 dtInput.value = ride.dateTimeIso || getDefaultNextSundayIso();
                 meetingInput.value = ride.meeting;
                 diffSelect.value = ride.difficulty || 'Media - Bosco & Fango';
+                if (notesInput) notesInput.value = ride.notes || '';
                 setRidePosterFormState(ride.posterDataUrl || '', ride.posterName || 'locandina-uscita.jpg');
                 setRidePdfFormState(ride.pdfDataUrl || '', ride.pdfName || '');
                 submitBtn.textContent = 'Aggiorna';
@@ -4059,6 +4097,7 @@
                 dtInput.value = getDefaultNextSundayIso();
                 meetingInput.value = '';
                 diffSelect.value = 'Media - Bosco & Fango';
+                if (notesInput) notesInput.value = '';
                 setRidePosterFormState('', '');
                 setRidePdfFormState('', '');
                 submitBtn.textContent = 'Salva';
@@ -4234,6 +4273,7 @@
                 const formattedDate = formatRideDateTimeItalian(dateTimeIso);
                 const meetingVal = (document.getElementById('ride-meeting')?.value || '').trim();
                 const difficulty = document.getElementById('ride-difficulty')?.value || 'Media - Bosco & Fango';
+                const notes = (document.getElementById('ride-notes')?.value || '').trim();
                 const posterName = (document.getElementById('ride-poster-filename')?.textContent || 'locandina-uscita.jpg').trim();
                 const coordMatch = meetingVal.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
 
@@ -4252,6 +4292,7 @@
                         lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
                         lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
                         difficulty,
+                        notes,
                         posterDataUrl: tempRidePosterDataUrl || '',
                         posterName: tempRidePosterDataUrl ? posterName : '',
                         pdfDataUrl: tempRidePdfDataUrl || '',
@@ -4283,6 +4324,7 @@
                         lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
                         lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
                         difficulty,
+                        notes,
                         posterDataUrl: tempRidePosterDataUrl || '',
                         posterName: tempRidePosterDataUrl ? posterName : '',
                         pdfDataUrl: tempRidePdfDataUrl || '',
@@ -4328,21 +4370,21 @@
         function confirmDeleteRide(rideId) {
             const me = getCurrentPilot();
             const ride = rides.find(r => r.id === rideId);
-            if (!me || !ride) return;
-            const canDelete = ride.authorId === me.id || isCurrentUserAdmin(me);
-            if (!canDelete) {
-                showToast("Puoi eliminare solo le uscite proposte da te.", "error");
-                return;
-            }
+            if (!me || !ride || !canEditRide(ride, me)) return;
+
+            const isAuthor = ride.authorId === me.id;
+            const modalTitle = !isAuthor && isCurrentUserAdmin(me)
+                ? "Elimina Uscita (Azione Amministratore)"
+                : "Elimina Uscita";
 
             showCustomConfirm(
-                "Elimina Uscita",
-                `Vuoi eliminare definitivamente l'uscita "${ride.title}"?`,
+                modalTitle,
+                `Sei sicuro di voler eliminare l'uscita "${ride.title}"?`,
                 () => {
                     rides = rides.filter(r => r.id !== rideId);
                     saveState();
                     renderRides();
-                    showToast("Uscita rimossa.");
+                    showToast("Uscita eliminata.");
                 }
             );
         }
@@ -4354,213 +4396,216 @@
             const amIAdmin = isCurrentUserAdmin(me);
             container.innerHTML = '';
 
-            if (rides.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full bg-mud-900 border border-stone-800 rounded-3xl p-8 text-center space-y-2">
-                        <i class="fa-solid fa-route text-3xl text-stone-600"></i>
-                        <p class="text-sm font-bold text-stone-300">Nessuna uscita in programma al momento</p>
-                        <p class="text-xs text-stone-500">Premi "Proponi Uscita" in alto per creare il prossimo giro in quad!</p>
-                    </div>
-                `;
-                return;
-            }
-
             rides.forEach(ride => {
-                const participantsList = Array.isArray(ride.participants) ? ride.participants : [];
-                const isJoined = me && participantsList.includes(me.id);
-                const isOwner = me && ride.authorId === me.id;
-                const canManage = isOwner || amIAdmin;
-                const mapsUrl = buildGoogleMapsRideUrl(ride);
-                const displayDate = ride.dateTimeIso ? formatRideDateTimeItalian(ride.dateTimeIso) : (ride.date || '');
-                const author = pilots.find(p => p.id === ride.authorId);
+                const author = pilots.find(p => p.id === ride.authorId) || { name: "Pilota Squadra" };
+                const isAuthor = me && ride.authorId === me.id;
+                const canManageRide = canEditRide(ride, me);
+                const participants = Array.isArray(ride.participants) ? ride.participants : [];
+                const isJoined = me && participants.includes(me.id);
+                const gMapsUrl = buildGoogleMapsRideUrl(ride);
+
                 const safeId = escapeHtml(ride.id);
                 const safeTitle = escapeHtml(ride.title);
-                const safeDifficulty = escapeHtml(ride.difficulty || '');
-                const safeMeeting = escapeHtml(ride.meeting || '');
+                const safeDate = escapeHtml(ride.date);
+                const safeMeeting = escapeHtml(ride.meeting);
+                const safeDifficulty = escapeHtml(ride.difficulty || 'Media');
+                const difficultyBadgeClass = getDifficultyBadgeClass(ride.difficulty);
+                const safeNotes = escapeHtml((ride.notes || '').trim());
+                const safeAuthor = escapeHtml(author.name);
                 const hasPoster = Boolean(ride.posterDataUrl && isSafeMediaUrl(ride.posterDataUrl));
+                const safePosterUrl = hasPoster ? escapeHtml(ride.posterDataUrl) : '';
                 const hasPdf = Boolean(ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(ride.pdfDataUrl.trim()));
+                const safePdfName = escapeHtml(ride.pdfName || 'programma-uscita.pdf');
 
-                const participantNames = participantsList
-                    .map(pid => pilots.find(p => p.id === pid)?.name)
-                    .filter(Boolean)
-                    .map(escapeHtml)
-                    .join(', ');
+                const participantChips = participants.map(pid => {
+                    const p = pilots.find(item => item.id === pid);
+                    if (!p) return '';
+                    return `<span class="px-2 py-0.5 rounded-full bg-mud-950 border border-stone-700 text-[10px] font-semibold text-stone-200">${escapeHtml(p.name)}</span>`;
+                }).join('');
 
                 const card = document.createElement('div');
-                card.className = 'bg-mud-900 border border-stone-800 rounded-3xl p-5 flex flex-col justify-between gap-4';
+                card.className = `bg-mud-900 border ${isAuthor ? 'border-quad-500/40' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4 shadow-lg`;
+
                 card.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <span class="px-2.5 py-1 rounded-lg bg-quad-500/15 border border-quad-500/30 text-quad-400 text-[11px] font-bold">
-                                <i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(displayDate)}
-                            </span>
-                            <div class="flex items-center gap-1.5">
-                                <span class="px-2.5 py-1 rounded-lg bg-stone-800 text-stone-300 text-[11px] font-semibold">
-                                    ${safeDifficulty}
-                                </span>
-                                ${canManage ? `
-                                    <button type="button" onclick="openNewRideForm('${safeId}')" title="${isOwner ? 'Modifica questa uscita' : 'Modifica uscita (Admin)'}"
-                                            class="px-2.5 py-1 rounded-lg bg-quad-500/15 hover:bg-quad-600 text-quad-400 hover:text-white border border-quad-500/30 text-[11px] font-bold transition cursor-pointer">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
-                                    <button type="button" onclick="confirmDeleteRide('${safeId}')" title="${isOwner ? 'Elimina questa uscita' : 'Elimina uscita (Admin)'}"
-                                            class="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-[11px] font-bold transition cursor-pointer">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                ` : ''}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-base font-bold text-white">${safeTitle}</h3>
-                            ${author ? `<p class="text-[11px] text-stone-400 mt-0.5">Proposta da <strong class="text-stone-200">${escapeHtml(author.name)}</strong></p>` : ''}
-                        </div>
-
+                    <div class="space-y-2.5">
                         ${hasPoster ? `
-                            <div class="relative rounded-2xl overflow-hidden border border-stone-800 bg-mud-950">
-                                <img src="${escapeHtml(ride.posterDataUrl)}" alt="Locandina ${safeTitle}" class="w-full max-h-60 object-cover">
-                                <button type="button" onclick="downloadRidePoster('${safeId}')"
-                                        class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl bg-black/80 hover:bg-quad-600 text-white border border-stone-700 text-[11px] font-bold flex items-center gap-1.5 shadow-lg transition cursor-pointer">
-                                    <i class="fa-solid fa-download"></i>
-                                    <span>Scarica Locandina</span>
-                                </button>
+                        <div class="relative rounded-2xl overflow-hidden border border-stone-800 bg-mud-950">
+                            <img src="${safePosterUrl}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="${safeTitle}"
+                                 class="w-full h-44 object-cover">
+                            <button type="button" onclick="downloadRidePoster('${safeId}')"
+                                    class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl bg-black/80 hover:bg-quad-600 text-white text-[11px] font-bold border border-stone-700 flex items-center gap-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-download"></i> Scarica Locandina
+                            </button>
+                        </div>` : ''}
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                                    <span class="text-[11px] font-bold text-quad-400"><i class="fa-regular fa-calendar mr-1"></i>${safeDate}</span>
+                                    ${isAuthor ? '<span class="px-2 py-0.5 rounded bg-quad-600 text-[9px] font-black text-white uppercase">Creata da Te</span>' : ''}
+                                    ${!isAuthor && amIAdmin ? '<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-black uppercase"><i class="fa-solid fa-crown mr-0.5"></i>Admin</span>' : ''}
+                                </div>
+                                <h3 class="text-base font-bold text-white">${safeTitle}</h3>
                             </div>
-                        ` : ''}
+                            <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${difficultyBadgeClass}">${safeDifficulty}</span>
+                        </div>
+                        <p class="text-xs text-stone-300"><i class="fa-solid fa-location-dot text-emerald-400 mr-1.5"></i>${safeMeeting}</p>
+                        ${safeNotes ? `
+                        <div class="bg-mud-950/90 border border-quad-500/30 rounded-xl px-3 py-2 text-xs text-stone-200 flex items-start gap-2">
+                            <i class="fa-solid fa-note-sticky text-quad-400 mt-0.5 shrink-0"></i>
+                            <div class="min-w-0">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-quad-400 block">Note</span>
+                                <span class="leading-relaxed break-words">${safeNotes}</span>
+                            </div>
+                        </div>` : ''}
+                        <p class="text-[11px] text-stone-400">Proposta da: <strong class="text-stone-200">${safeAuthor}</strong></p>
 
-                        <div class="flex flex-wrap items-center justify-between gap-2 bg-mud-950 border border-stone-800/90 rounded-2xl p-3">
-                            <div class="min-w-0 flex-1">
-                                <span class="block text-[10px] uppercase font-bold text-stone-500">Punto di Ritrovo</span>
-                                <span class="text-xs text-stone-200 font-semibold break-words">
-                                    <i class="fa-solid fa-location-dot text-quad-500 mr-1"></i>${safeMeeting}
-                                </span>
+                        ${hasPdf ? `
+                        <div class="bg-mud-950/90 border border-emerald-500/30 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-file-pdf text-red-400 text-sm shrink-0"></i>
+                                <span class="text-[11px] font-semibold text-stone-200 truncate">${safePdfName}</span>
                             </div>
-                            <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer"
-                               class="px-3 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500 text-sky-400 hover:text-white border border-sky-500/30 text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition">
+                            <button type="button" onclick="downloadRidePdf('${safeId}')"
+                                    class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer">
+                                <i class="fa-solid fa-download"></i> Scarica PDF
+                            </button>
+                        </div>` : ''}
+
+                        <div class="pt-1">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+                                Partecipanti Confermati (${participants.length})
+                            </p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${participantChips || '<span class="text-[11px] text-stone-500 italic">Nessun partecipante ancora</span>'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="toggleRideParticipation('${safeId}')"
+                                    class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                                        isJoined
+                                            ? 'bg-forest-600 hover:bg-forest-500 text-white shadow-lg shadow-forest-600/20'
+                                            : 'bg-quad-600 hover:bg-quad-500 text-white shadow-lg shadow-quad-600/20'
+                                    }">
+                                <i class="fa-solid ${isJoined ? 'fa-check-circle' : 'fa-user-plus'}"></i>
+                                <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
+                            </button>
+
+                            <a href="${escapeHtml(gMapsUrl)}" target="_blank" rel="noopener noreferrer"
+                               class="px-3 py-2 rounded-xl bg-sky-300 hover:bg-sky-200 text-black text-xs font-bold flex items-center gap-1.5 transition">
                                 <i class="fa-solid fa-map-location-dot"></i>
-                                <span>Google Maps</span>
+                                <span>Apri su Maps</span>
                             </a>
                         </div>
 
-                        ${hasPdf ? `
-                            <div class="flex items-center justify-between gap-2 bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-3">
-                                <div class="min-w-0 flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                                        <i class="fa-solid fa-file-pdf"></i>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <span class="block text-[10px] uppercase font-bold text-emerald-400">Programma PDF Allegato</span>
-                                        <span class="block text-xs font-semibold text-white truncate">${escapeHtml(ride.pdfName || 'programma-uscita.pdf')}</span>
-                                    </div>
-                                </div>
-                                <button type="button" onclick="downloadRidePdf('${safeId}')"
-                                        class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 shrink-0 transition cursor-pointer">
-                                    <i class="fa-solid fa-download"></i>
-                                    <span>Scarica PDF</span>
+                        ${canManageRide ? `
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" onclick="openNewRideForm('${safeId}')" title="Modifica uscita"
+                                        class="px-3 py-2 rounded-xl bg-stone-800 hover:bg-quad-600 text-stone-200 hover:text-white text-xs font-bold transition cursor-pointer">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button type="button" onclick="confirmDeleteRide('${safeId}')" title="Elimina uscita"
+                                        class="px-3 py-2 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs font-bold transition cursor-pointer">
+                                    <i class="fa-solid fa-trash"></i>
                                 </button>
                             </div>
                         ` : ''}
-
-                        <div class="pt-2 border-t border-stone-800/80 text-xs text-stone-300">
-                            <span class="text-stone-500">Piloti iscritti (${participantsList.length}):</span>
-                            <span class="font-semibold text-white">${participantNames || 'Nessuno ancora'}</span>
-                        </div>
                     </div>
-
-                    <button type="button" onclick="toggleRideParticipation('${safeId}')"
-                            class="w-full py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                                isJoined
-                                    ? 'bg-forest-600/20 text-emerald-400 border border-forest-500/40 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
-                                    : 'bg-quad-600 hover:bg-quad-500 text-white shadow-lg shadow-quad-600/20'
-                            }">
-                        ${isJoined ? '<i class="fa-solid fa-check mr-1.5"></i>Partecipazione Confermata (Clicca per annullare)' : '<i class="fa-solid fa-helmet-safety mr-1.5"></i>Partecipo a questa Uscita'}
-                    </button>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // ==================== GESTIONE PUNTO GPS CASA ====================
+        // ==================== MAPPA PUNTO CASA & SALVATAGGIO GARAGE ====================
         function initOrRefreshHomePickerMap() {
             const me = getCurrentPilot();
             if (!me) return;
+            const lat = parseFloat(document.getElementById('garage-lat').value) || me.lat || 45.3541;
+            const lng = parseFloat(document.getElementById('garage-lng').value) || me.lng || 10.7336;
 
             try {
-                if (typeof L === 'undefined') return;
-                const mapEl = document.getElementById('profile-home-map');
-                if (!mapEl) return;
+                if (typeof L !== 'undefined') {
+                    const el = document.getElementById('profile-home-map');
+                    if (el && !homeMapInstance) {
+                        el.innerHTML = '';
+                        homeMapInstance = L.map('profile-home-map').setView([lat, lng], 12);
+                        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                            maxZoom: 19,
+                            attribution: '&copy; Esri'
+                        }).addTo(homeMapInstance);
 
-                if (!homeMapInstance) {
-                    mapEl.innerHTML = '';
-                    homeMapInstance = L.map('profile-home-map').setView([me.lat, me.lng], 12);
-                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-                        maxZoom: 19,
-                        attribution: '&copy; Esri'
-                    }).addTo(homeMapInstance);
+                        homeMapInstance.on('click', function(ev) {
+                            setHomeCoordinates(ev.latlng.lat, ev.latlng.lng, null, false);
+                        });
+                    } else if (homeMapInstance) {
+                        homeMapInstance.invalidateSize();
+                        homeMapInstance.setView([lat, lng], 12);
+                    }
 
-                    const homeIcon = L.divIcon({
-                        className: '',
-                        html: `<div class="home-gps-marker w-9 h-9"><i class="fa-solid fa-house text-sm"></i></div>`,
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 18]
-                    });
-
-                    homeMapMarker = L.marker([me.lat, me.lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
-                    homeMapMarker.on('dragend', () => {
-                        const pos = homeMapMarker.getLatLng();
-                        updateHomeCoordsInputs(pos.lat, pos.lng);
-                    });
-
-                    homeMapInstance.on('click', (e) => {
-                        homeMapMarker.setLatLng(e.latlng);
-                        updateHomeCoordsInputs(e.latlng.lat, e.latlng.lng);
-                    });
-                } else {
-                    homeMapInstance.invalidateSize();
-                    homeMapInstance.setView([me.lat, me.lng], 12);
-                    if (homeMapMarker) homeMapMarker.setLatLng([me.lat, me.lng]);
+                    if (homeMapInstance) {
+                        const homeIcon = L.divIcon({
+                            className: '',
+                            html: `<div class="home-gps-marker w-9 h-9 text-sm"><i class="fa-solid fa-house"></i></div>`,
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 18]
+                        });
+                        if (homeMapMarker) {
+                            homeMapMarker.setLatLng([lat, lng]);
+                        } else {
+                            homeMapMarker = L.marker([lat, lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
+                            homeMapMarker.on('dragend', function(ev) {
+                                const pos = ev.target.getLatLng();
+                                setHomeCoordinates(pos.lat, pos.lng, null, false);
+                            });
+                        }
+                    }
                 }
             } catch (e) {}
         }
 
-        function updateHomeCoordsInputs(lat, lng) {
-            document.getElementById('garage-lat').value = Number(lat).toFixed(6);
-            document.getElementById('garage-lng').value = Number(lng).toFixed(6);
+        function setHomeCoordinates(lat, lng, cityLabel = null, recenter = true) {
+            const latInput = document.getElementById('garage-lat');
+            const lngInput = document.getElementById('garage-lng');
+            if (latInput) latInput.value = Number(lat).toFixed(6);
+            if (lngInput) lngInput.value = Number(lng).toFixed(6);
+            if (cityLabel) {
+                const cityInput = document.getElementById('garage-city');
+                if (cityInput) cityInput.value = cityLabel;
+            }
+            if (homeMapInstance && homeMapMarker) {
+                homeMapMarker.setLatLng([lat, lng]);
+                if (recenter) homeMapInstance.setView([lat, lng], 12);
+            }
         }
 
         function setQuickHomeCoords(lat, lng, cityLabel) {
-            updateHomeCoordsInputs(lat, lng);
-            const cityInput = document.getElementById('garage-city');
-            if (cityInput && cityLabel) cityInput.value = cityLabel;
-            if (homeMapInstance && homeMapMarker) {
-                homeMapMarker.setLatLng([lat, lng]);
-                homeMapInstance.setView([lat, lng], 12);
-            }
-            showToast(`Coordinate casa impostate su ${cityLabel}`);
+            setHomeCoordinates(lat, lng, cityLabel, true);
+            showToast(`Punto casa impostato su ${cityLabel}`);
         }
 
         function syncHomeMapFromInputs() {
             const lat = parseFloat(document.getElementById('garage-lat').value);
             const lng = parseFloat(document.getElementById('garage-lng').value);
-            if (!isNaN(lat) && !isNaN(lng) && homeMapInstance && homeMapMarker) {
-                homeMapMarker.setLatLng([lat, lng]);
-                homeMapInstance.setView([lat, lng], 12);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                setHomeCoordinates(lat, lng, null, true);
             }
         }
 
         function detectDeviceGPSForHome() {
             if (!navigator.geolocation) {
-                showToast("Geolocalizzazione non disponibile su questo browser.", "error");
+                showToast("Geolocalizzazione non supportata dal browser.", "error");
                 return;
             }
-            showToast("Rilevamento posizione GPS casa in corso...");
+            showToast("Rilevamento posizione GPS di casa in corso...");
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    updateHomeCoordsInputs(pos.coords.latitude, pos.coords.longitude);
-                    syncHomeMapFromInputs();
+                    setHomeCoordinates(pos.coords.latitude, pos.coords.longitude, "Posizione GPS Casa", true);
                     showToast("Coordinate GPS di casa rilevate! Premi 'Salva Dati & Posizione Casa'.");
                 },
                 () => {
-                    showToast("Permesso GPS negato: clicca direttamente sulla mappa per scegliere casa tua.", "error");
+                    showToast("Impossibile rilevare il GPS: clicca sulla mappa per scegliere il punto casa.", "error");
                 },
                 { enableHighAccuracy: true, timeout: 8000 }
             );
@@ -4570,18 +4615,19 @@
             e.preventDefault();
             const me = getCurrentPilot();
             if (!me) return;
+            ensurePilotVehicles(me);
 
             const firstName = document.getElementById('garage-first-name').value.trim();
             const lastName = document.getElementById('garage-last-name').value.trim();
-            const email = document.getElementById('garage-email').value.trim().toLowerCase();
+            const newEmail = document.getElementById('garage-email').value.trim().toLowerCase();
             const phone = document.getElementById('garage-phone').value.trim();
             const city = document.getElementById('garage-city').value.trim();
-            const newPin = (document.getElementById('garage-pin')?.value || '').trim();
+            const newPin = (document.getElementById('garage-pin')?.value || me.pin || '1234').trim();
             const lat = parseFloat(document.getElementById('garage-lat').value);
             const lng = parseFloat(document.getElementById('garage-lng').value);
 
-            if (!firstName || !lastName || !email) {
-                showToast("Nome, Cognome ed Email sono obbligatori.", "error");
+            if (!firstName || !lastName || !newEmail) {
+                showToast("Nome, Cognome ed Email (Nickname univoco) sono obbligatori.", "error");
                 return;
             }
 
@@ -4592,55 +4638,59 @@
             }
 
             if (isPinAlreadyInUse(newPin, me.id)) {
-                showToast("Questo PIN è già in uso da un altro pilota! Scegli un PIN univoco diverso.", "error");
+                showToast("Questo PIN è già in uso da un altro pilota! Scegli un PIN univoco.", "error");
                 document.getElementById('garage-pin')?.focus();
                 return;
             }
 
-            const emailConflict = pilots.some(p => p.id !== me.id && (p.email || '').trim().toLowerCase() === email);
-            if (emailConflict) {
-                showToast("Questa Email (Nickname univoco) è già utilizzata da un altro pilota!", "error");
+            const emailTakenByOther = pilots.some(p => p.id !== me.id && (p.email || '').toLowerCase() === newEmail);
+            if (emailTakenByOther) {
+                showToast("Questa Email è già in uso da un altro pilota del gruppo!", "error");
                 document.getElementById('garage-email').focus();
                 return;
             }
 
             me.firstName = firstName;
             me.lastName = lastName;
-            me.email = email;
+            me.email = newEmail;
             me.name = `${firstName} ${lastName}`.trim();
             me.phone = phone;
             me.city = city;
             me.pin = newPin;
-            if (!isNaN(lat)) me.lat = lat;
-            if (!isNaN(lng)) me.lng = lng;
-            ensurePilotVehicles(me);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                me.lat = lat;
+                me.lng = lng;
+            }
 
+            ensurePilotVehicles(me);
             saveState();
             enterAppSession();
             switchTab('garage');
-            showToast("Dati anagrafici, PIN univoco e posizione GPS di casa salvati!");
+            showToast("Profilo, PIN univoco e punto GPS di casa salvati!");
         }
 
-        // ==================== AVVIO APPLICAZIONE ====================
-        window.addEventListener('DOMContentLoaded', () => {
-            try {
-                if (sanitizeAllPhotosToQuadOnly()) {
-                    safeStorage.set('gq_pilots_v5', JSON.stringify(pilots));
-                    safeStorage.set('gq_listings_v5', JSON.stringify(listings));
-                }
+        // ==================== AVVIO INIZIALIZZAZIONE ====================
+        (function init() {
+            const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
+            pilots.forEach(ensurePilotIdentityFields);
+            safeStorage.set('gq_pilots_v5', JSON.stringify(pilots));
+            safeStorage.set('gq_listings_v5', JSON.stringify(listings));
+            safeStorage.set('gq_rides_v5', JSON.stringify(rides));
+            safeStorage.set('gq_messages_v5', JSON.stringify(messages));
 
-                renderLoginPilots();
-                if (currentSessionPilotId && getCurrentPilot()) {
-                    enterAppSession();
-                } else {
-                    showLoginScreen();
-                }
-                startCloudSyncLoop();
-            } catch (err) {
-                const loginEl = document.getElementById('login-screen');
-                if (loginEl) loginEl.classList.remove('hidden');
+            renderLoginPilots();
+            startCloudSyncLoop();
+
+            if (hadLegacyPhotos && cloudDbBaseUrl) {
+                scheduleCloudPush(300);
             }
-        });
+
+            if (currentSessionPilotId && pilots.some(p => p.id === currentSessionPilotId)) {
+                enterAppSession();
+            } else {
+                showLoginScreen();
+            }
+        })();
     </script>
 </body>
 </html>
