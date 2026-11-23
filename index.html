@@ -1941,6 +1941,7 @@
         let pendingPushTimer = null;
         let isCloudPushing = false;
         let isSavingRide = false;
+        let lastLocalMutationAt = Number(safeStorage.get('gq_last_local_mutation_at') || 0);
         let isFirebaseSocketLive = false;
         let isRestFallbackActive = false;
 
@@ -2060,6 +2061,12 @@
             if (!data || !Array.isArray(data.pilots) || data.pilots.length === 0) return false;
             if (isSavingRide || isCloudPushing || pendingPushTimer) return true;
 
+            const remoteUpdatedAt = Number(data.updatedAt || 0);
+            if (lastLocalMutationAt > 0 && remoteUpdatedAt > 0 && remoteUpdatedAt < lastLocalMutationAt) {
+                executeCloudPushNow();
+                return true;
+            }
+
             const normalizedRemoteRides = Array.isArray(data.rides)
                 ? data.rides.filter(r => r && typeof r === 'object')
                 : (data.rides && typeof data.rides === 'object' ? Object.values(data.rides).filter(r => r && typeof r === 'object') : []);
@@ -2085,6 +2092,10 @@
             safeStorage.set('gq_listings_v5', JSON.stringify(listings));
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
+            if (remoteUpdatedAt > 0) {
+                lastLocalMutationAt = remoteUpdatedAt;
+                safeStorage.set('gq_last_local_mutation_at', String(remoteUpdatedAt));
+            }
 
             if (hadLegacyPhotos && cloudDbBaseUrl) {
                 scheduleCloudPush(250);
@@ -2099,15 +2110,17 @@
 
         async function pushStateViaRest(dbUrl) {
             const endpoint = `${dbUrl}/${CLOUD_ROOM_PATH}.json`;
+            const nowTs = Date.now();
             const payload = {
                 pilots,
                 listings,
                 rides,
                 messages,
-                updatedAt: Date.now()
+                updatedAt: nowTs
             };
             const res = await fetch(endpoint, {
                 method: 'PUT',
+                keepalive: true,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -2117,6 +2130,8 @@
             if (!res.ok) {
                 throw new Error('http_' + res.status);
             }
+            lastLocalMutationAt = nowTs;
+            safeStorage.set('gq_last_local_mutation_at', String(nowTs));
             lastConfirmedCloudHash = JSON.stringify({ pilots, listings, rides, messages });
             return true;
         }
@@ -2180,24 +2195,34 @@
         function executeCloudPushNow() {
             if (!cloudDbBaseUrl || isCloudPushing) return;
             isCloudPushing = true;
+            const nowTs = Date.now();
             const snapshotHash = JSON.stringify({ pilots, listings, rides, messages });
-            const payload = {
+            const payload = JSON.parse(JSON.stringify({
                 pilots,
                 listings,
                 rides,
                 messages,
-                updatedAt: Date.now()
-            };
+                updatedAt: nowTs
+            }));
 
             const onSuccess = () => {
+                lastLocalMutationAt = nowTs;
+                safeStorage.set('gq_last_local_mutation_at', String(nowTs));
                 lastConfirmedCloudHash = snapshotHash;
                 updateCloudStatusUI(true, 'Cloud Live');
+            };
+
+            const onFailure = (err) => {
+                const msg = (err && err.message === 'permission_denied')
+                    ? 'Permessi Cloud negati: salvato solo in locale.'
+                    : 'Errore sincronizzazione Cloud (allegato troppo pesante o rete assente).';
+                showToast(msg, 'error');
             };
 
             if (firebaseRoomRef && isFirebaseSocketLive) {
                 firebaseRoomRef.set(payload)
                     .then(onSuccess)
-                    .catch(() => pushStateViaRest(cloudDbBaseUrl).then(onSuccess).catch(() => {}))
+                    .catch(() => pushStateViaRest(cloudDbBaseUrl).then(onSuccess).catch(onFailure))
                     .finally(() => { isCloudPushing = false; });
             } else {
                 pushStateViaRest(cloudDbBaseUrl)
@@ -2205,7 +2230,7 @@
                         isRestFallbackActive = true;
                         onSuccess();
                     })
-                    .catch(() => {})
+                    .catch(onFailure)
                     .finally(() => { isCloudPushing = false; });
             }
         }
@@ -2458,12 +2483,19 @@
         }
 
         function saveState() {
+            const nowTs = Date.now();
+            lastLocalMutationAt = nowTs;
+            safeStorage.set('gq_last_local_mutation_at', String(nowTs));
             safeStorage.set('gq_pilots_v5', JSON.stringify(pilots));
             safeStorage.set('gq_listings_v5', JSON.stringify(listings));
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
             if (cloudDbBaseUrl) {
-                pushStateToCloud();
+                if (pendingPushTimer) {
+                    clearTimeout(pendingPushTimer);
+                    pendingPushTimer = null;
+                }
+                executeCloudPushNow();
             }
         }
 
@@ -4245,8 +4277,8 @@
             }
 
             if (isPdf) {
-                if (file.size > 1.5 * 1024 * 1024) {
-                    showToast("Il file PDF supera 1.5 MB: scegli un PDF più leggero per la sincronizzazione Cloud.", "error");
+                if (file.size > 950 * 1024) {
+                    showToast("Il file PDF supera 950 KB: comprimi il PDF oppure carica una foto JPG del programma.", "error");
                     event.target.value = '';
                     return;
                 }
@@ -4260,7 +4292,7 @@
             }
 
             try {
-                const compressed = await compressImageFileToDataUrl(file, 900, 0.75);
+                const compressed = await compressImageFileToDataUrl(file, 640, 0.65);
                 const jpgName = lowerName.endsWith('.png')
                     ? file.name.replace(/\.png$/i, '.jpg')
                     : file.name;
@@ -4334,24 +4366,44 @@
         }
 
         function handleSaveRide(e) {
-            e.preventDefault();
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
             const me = getCurrentPilot();
-            if (!me || isSavingRide) return;
+            if (!me) {
+                showToast("Sessione pilota non attiva: effettua di nuovo l'accesso.", "error");
+                return;
+            }
+            if (isSavingRide) return;
             isSavingRide = true;
 
             try {
-                const formEl = e.currentTarget || e.target;
+                const formEl = (e && (e.currentTarget || e.target)) || document.querySelector('#new-ride-panel form');
                 const editId = (document.getElementById('ride-edit-id')?.value || '').trim();
                 const title = (document.getElementById('ride-title')?.value || '').trim();
+                if (!title) {
+                    isSavingRide = false;
+                    showToast("Inserisci il titolo dell'uscita.", "error");
+                    return;
+                }
+
                 const dateTimesIso = getCurrentFormDateTimes().filter(Boolean);
                 if (dateTimesIso.length === 0) {
+                    isSavingRide = false;
                     showToast("Seleziona almeno una data e ora di uscita.", "error");
                     return;
                 }
+
+                const meetingVal = (document.getElementById('ride-meeting')?.value || '').trim();
+                if (!meetingVal) {
+                    isSavingRide = false;
+                    showToast("Inserisci il punto di ritrovo.", "error");
+                    return;
+                }
+
                 const firstDateTimeIso = dateTimesIso[0];
                 const formattedDates = dateTimesIso.map(formatRideDateTimeItalian);
                 const formattedDateSummary = formattedDates.join(' | ');
-                const meetingVal = (document.getElementById('ride-meeting')?.value || '').trim();
                 const difficulty = document.getElementById('ride-difficulty')?.value || 'Media - Bosco & Fango';
                 const notes = (document.getElementById('ride-notes')?.value || '').trim();
                 const coordMatch = meetingVal.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
@@ -4369,6 +4421,7 @@
                 if (editId) {
                     const idx = rides.findIndex(r => r.id === editId);
                     if (idx === -1 || !canEditRide(rides[idx], me)) {
+                        isSavingRide = false;
                         showToast("Operazione non consentita.", "error");
                         return;
                     }
@@ -4379,13 +4432,13 @@
                         dateTimeIso: firstDateTimeIso,
                         dateTimesIso,
                         meeting: meetingVal,
-                        lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
-                        lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
+                        lat: coordMatch ? parseFloat(coordMatch[1]) : null,
+                        lng: coordMatch ? parseFloat(coordMatch[2]) : null,
                         difficulty,
                         notes,
                         ...programFields
                     };
-                    showToast("Uscita modificata e aggiornata per il gruppo!");
+                    showToast("Uscita modificata e salvata per il gruppo!");
                 } else {
                     const duplicateRecent = rides.some(r =>
                         r.authorId === me.id &&
@@ -4394,6 +4447,7 @@
                         (r.meeting || '') === meetingVal
                     );
                     if (duplicateRecent) {
+                        isSavingRide = false;
                         showToast("Questa uscita è già stata salvata!");
                         closeRideForm();
                         renderRides();
@@ -4409,15 +4463,15 @@
                         dateTimeIso: firstDateTimeIso,
                         dateTimesIso,
                         meeting: meetingVal,
-                        lat: coordMatch ? parseFloat(coordMatch[1]) : undefined,
-                        lng: coordMatch ? parseFloat(coordMatch[2]) : undefined,
+                        lat: coordMatch ? parseFloat(coordMatch[1]) : null,
+                        lng: coordMatch ? parseFloat(coordMatch[2]) : null,
                         difficulty,
                         notes,
                         ...programFields,
                         participants: [me.id]
                     };
                     rides.unshift(newRide);
-                    showToast("Nuova uscita quad pubblicata!");
+                    showToast("Nuova uscita quad salvata e pubblicata!");
                 }
 
                 saveState();
@@ -4426,10 +4480,11 @@
                 }
                 closeRideForm();
                 renderRides();
+            } catch (err) {
+                console.error("Errore salvataggio uscita:", err);
+                showToast("Errore durante il salvataggio dell'uscita.", "error");
             } finally {
-                setTimeout(() => {
-                    isSavingRide = false;
-                }, 400);
+                isSavingRide = false;
             }
         }
 
