@@ -545,6 +545,14 @@
                     <span>Nuovo Pilota</span>
                 </button>
             </div>
+
+            <!-- Sezione Social nella Schermata di Login -->
+            <div class="pt-3 border-t border-stone-800/90 text-center space-y-2">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    <i class="fa-solid fa-share-nodes text-quad-400 mr-1"></i> Seguici sui Social Ufficiali
+                </p>
+                <div id="login-social-links-row" class="flex flex-wrap items-center justify-center gap-2"></div>
+            </div>
         </div>
     </div>
 
@@ -682,6 +690,26 @@
                             class="self-start sm:self-center shrink-0 px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold transition cursor-pointer">
                         Sostieni il Progetto
                     </button>
+                </div>
+
+                <!-- ==================== SEZIONE SEGUICI SUI SOCIAL (DASHBOARD) ==================== -->
+                <div class="bg-mud-900 border border-stone-800 rounded-3xl p-5 sm:p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-share-nodes text-quad-500"></i> Seguici sui Social & Community
+                            </h2>
+                            <p class="text-xs text-stone-400">
+                                Video delle uscite, foto nel fango, raduni e aggiornamenti ufficiali di <strong class="text-stone-200">GRUPPOQUAD</strong>.
+                            </p>
+                        </div>
+                        <button type="button" id="admin-edit-social-btn" onclick="openSocialLinksModal()"
+                                class="hidden self-start sm:self-auto px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span>Modifica Link Social</span>
+                        </button>
+                    </div>
+                    <div id="dashboard-social-links-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5"></div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1342,6 +1370,76 @@
         </div>
     </div>
 
+    <!-- ==================== MODALE MODIFICA LINK SOCIAL (AMMINISTRATORE) ==================== -->
+    <div id="social-links-modal" data-modal="true" style="z-index: 9985;" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl my-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-share-nodes text-amber-400"></i> Gestione Link Social GRUPPOQUAD
+                </h3>
+                <button type="button" onclick="closeSocialLinksModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-stone-400 leading-relaxed">
+                Inserisci gli indirizzi completi (<code class="text-quad-400">https://...</code>) dei canali ufficiali. Lascia vuoto un campo per nascondere quel pulsante dalla pagina.
+            </p>
+            <form onsubmit="handleSaveSocialLinks(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">
+                        <i class="fa-brands fa-facebook text-[#1877F2] mr-1.5"></i>Pagina / Gruppo Facebook
+                    </label>
+                    <input type="url" id="social-input-facebook" placeholder="https://www.facebook.com/groups/gruppoquad"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">
+                        <i class="fa-brands fa-youtube text-[#FF0000] mr-1.5"></i>Canale YouTube
+                    </label>
+                    <input type="url" id="social-input-youtube" placeholder="https://www.youtube.com/@gruppoquad"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">
+                        <i class="fa-brands fa-instagram text-[#E4405F] mr-1.5"></i>Profilo Instagram
+                    </label>
+                    <input type="url" id="social-input-instagram" placeholder="https://www.instagram.com/gruppoquad"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">
+                        <i class="fa-brands fa-tiktok text-white mr-1.5"></i>Profilo TikTok
+                    </label>
+                    <input type="url" id="social-input-tiktok" placeholder="https://www.tiktok.com/@gruppoquad"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">
+                            <i class="fa-brands fa-whatsapp text-emerald-400 mr-1.5"></i>Canale / Invito WhatsApp
+                        </label>
+                        <input type="url" id="social-input-whatsapp" placeholder="https://chat.whatsapp.com/..."
+                               class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">
+                            <i class="fa-brands fa-telegram text-sky-400 mr-1.5"></i>Canale / Gruppo Telegram
+                        </label>
+                        <input type="url" id="social-input-telegram" placeholder="https://t.me/gruppoquad"
+                               class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeSocialLinksModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-semibold cursor-pointer">Annulla</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold shadow-lg shadow-quad-600/20 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> Salva & Sincronizza
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // ==================== SANITIZZAZIONE & SICUREZZA ====================
         function escapeHtml(value) {
@@ -1764,6 +1862,73 @@
             { id: 3, senderId: "pilot_luca", senderName: "Luca", text: "Presente! Ho appena aggiornato la posizione di casa mia sulla mappa amici.", time: "10:25" }
         ];
 
+        const DEFAULT_SOCIAL_LINKS = {
+            facebook: "https://www.facebook.com",
+            youtube: "https://www.youtube.com",
+            instagram: "https://www.instagram.com",
+            tiktok: "https://www.tiktok.com",
+            whatsapp: "https://wa.me/393471122334",
+            telegram: "https://t.me"
+        };
+
+        const SOCIAL_PLATFORMS_CONFIG = [
+            {
+                key: "facebook",
+                label: "Facebook",
+                subtitle: "Pagina & Foto",
+                icon: "fa-brands fa-facebook-f",
+                badgeClass: "bg-[#1877F2]/15 border-[#1877F2]/40 text-[#4599ff] hover:bg-[#1877F2] hover:text-white"
+            },
+            {
+                key: "youtube",
+                label: "YouTube",
+                subtitle: "Video & Trail",
+                icon: "fa-brands fa-youtube",
+                badgeClass: "bg-[#FF0000]/15 border-[#FF0000]/40 text-[#ff5555] hover:bg-[#FF0000] hover:text-white"
+            },
+            {
+                key: "instagram",
+                label: "Instagram",
+                subtitle: "Reel & Storie",
+                icon: "fa-brands fa-instagram",
+                badgeClass: "bg-[#E4405F]/15 border-[#E4405F]/40 text-[#ff6b86] hover:bg-[#E4405F] hover:text-white"
+            },
+            {
+                key: "tiktok",
+                label: "TikTok",
+                subtitle: "Clip Off-Road",
+                icon: "fa-brands fa-tiktok",
+                badgeClass: "bg-stone-700/40 border-stone-600 text-stone-100 hover:bg-white hover:text-black"
+            },
+            {
+                key: "whatsapp",
+                label: "WhatsApp",
+                subtitle: "Chat & Info",
+                icon: "fa-brands fa-whatsapp",
+                badgeClass: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600 hover:text-white"
+            },
+            {
+                key: "telegram",
+                label: "Telegram",
+                subtitle: "Canale Avvisi",
+                icon: "fa-brands fa-telegram",
+                badgeClass: "bg-sky-500/15 border-sky-500/40 text-sky-400 hover:bg-sky-500 hover:text-white"
+            }
+        ];
+
+        function loadParsedObject(key, fallback) {
+            try {
+                const raw = safeStorage.get(key);
+                if (!raw) return { ...fallback };
+                const parsed = JSON.parse(raw);
+                return (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+                    ? { ...fallback, ...parsed }
+                    : { ...fallback };
+            } catch (e) {
+                return { ...fallback };
+            }
+        }
+
         function loadParsedData(key, fallback) {
             try {
                 const raw = safeStorage.get(key);
@@ -1779,6 +1944,7 @@
         let listings = loadParsedData('gq_listings_v5', DEFAULT_LISTINGS);
         let rides = loadParsedData('gq_rides_v5', DEFAULT_RIDES);
         let messages = loadParsedData('gq_messages_v5', DEFAULT_MESSAGES);
+        let socialLinks = loadParsedObject('gq_social_links_v5', DEFAULT_SOCIAL_LINKS);
 
         let currentSessionPilotId = safeStorage.getSession('gq_active_pilot_id') || null;
 
@@ -1799,6 +1965,7 @@
                 const cancelBtn = document.getElementById('confirm-cancel-btn');
                 if (cancelBtn) cancelBtn.click();
             },
+            'social-links-modal': () => closeSocialLinksModal(),
             'payment-modal': () => closePaymentModal(),
             'admin-edit-pin-modal': () => closeAdminEditPinModal(),
             'recover-pin-modal': () => closeRecoverPinModal(),
@@ -1811,6 +1978,7 @@
         const MODAL_Z_ORDER = [
             'confirm-modal',
             'payment-modal',
+            'social-links-modal',
             'admin-edit-pin-modal',
             'recover-pin-modal',
             'new-pilot-modal',
@@ -2075,7 +2243,8 @@
                 pilots: data.pilots,
                 listings: data.listings || [],
                 rides: normalizedRemoteRides,
-                messages: data.messages || []
+                messages: data.messages || [],
+                socialLinks: data.socialLinks || DEFAULT_SOCIAL_LINKS
             });
 
             if (incomingHash === lastConfirmedCloudHash) return true;
@@ -2085,6 +2254,9 @@
             listings = Array.isArray(data.listings) ? data.listings : mergeCollectionById(listings, []);
             rides = normalizedRemoteRides.length > 0 ? normalizedRemoteRides : mergeCollectionById(rides, []);
             messages = Array.isArray(data.messages) ? data.messages : mergeCollectionById(messages, []);
+            if (data.socialLinks && typeof data.socialLinks === 'object') {
+                socialLinks = { ...DEFAULT_SOCIAL_LINKS, ...data.socialLinks };
+            }
 
             const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
 
@@ -2092,6 +2264,7 @@
             safeStorage.set('gq_listings_v5', JSON.stringify(listings));
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
+            safeStorage.set('gq_social_links_v5', JSON.stringify(socialLinks));
             if (remoteUpdatedAt > 0) {
                 lastLocalMutationAt = remoteUpdatedAt;
                 safeStorage.set('gq_last_local_mutation_at', String(remoteUpdatedAt));
@@ -2102,6 +2275,7 @@
             }
 
             renderLoginPilots();
+            renderSocialLinks();
             if (getCurrentPilot() && !hasOpenModalOrFormEdit()) {
                 refreshActiveViewsWithoutResettingInputs();
             }
@@ -2116,6 +2290,7 @@
                 listings,
                 rides,
                 messages,
+                socialLinks,
                 updatedAt: nowTs
             };
             const res = await fetch(endpoint, {
@@ -2132,7 +2307,7 @@
             }
             lastLocalMutationAt = nowTs;
             safeStorage.set('gq_last_local_mutation_at', String(nowTs));
-            lastConfirmedCloudHash = JSON.stringify({ pilots, listings, rides, messages });
+            lastConfirmedCloudHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks });
             return true;
         }
 
@@ -2196,12 +2371,13 @@
             if (!cloudDbBaseUrl || isCloudPushing) return;
             isCloudPushing = true;
             const nowTs = Date.now();
-            const snapshotHash = JSON.stringify({ pilots, listings, rides, messages });
+            const snapshotHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks });
             const payload = JSON.parse(JSON.stringify({
                 pilots,
                 listings,
                 rides,
                 messages,
+                socialLinks,
                 updatedAt: nowTs
             }));
 
@@ -2490,6 +2666,7 @@
             safeStorage.set('gq_listings_v5', JSON.stringify(listings));
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
+            safeStorage.set('gq_social_links_v5', JSON.stringify(socialLinks));
             if (cloudDbBaseUrl) {
                 if (pendingPushTimer) {
                     clearTimeout(pendingPushTimer);
@@ -2499,10 +2676,130 @@
             }
         }
 
+        // ==================== GESTIONE SEZIONE SEGUICI SUI SOCIAL ====================
+        function isSafeSocialHttpUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            try {
+                const parsed = new URL(url.trim());
+                return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function renderSocialLinks() {
+            const activePlatforms = SOCIAL_PLATFORMS_CONFIG.filter(p => isSafeSocialHttpUrl(socialLinks[p.key]));
+
+            // 1. Render nella schermata di Login
+            const loginRow = document.getElementById('login-social-links-row');
+            if (loginRow) {
+                loginRow.innerHTML = '';
+                activePlatforms.forEach(platform => {
+                    const url = escapeHtml(socialLinks[platform.key].trim());
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.title = `Seguici su ${platform.label}`;
+                    a.className = `px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 transition ${platform.badgeClass}`;
+                    a.innerHTML = `<i class="${platform.icon}"></i><span>${escapeHtml(platform.label)}</span>`;
+                    loginRow.appendChild(a);
+                });
+            }
+
+            // 2. Render nella Dashboard
+            const dashGrid = document.getElementById('dashboard-social-links-grid');
+            if (dashGrid) {
+                dashGrid.innerHTML = '';
+                if (activePlatforms.length === 0) {
+                    dashGrid.innerHTML = `
+                        <div class="col-span-full bg-mud-950 border border-stone-800 rounded-2xl p-4 text-center text-xs text-stone-400">
+                            Nessun canale social configurato al momento.
+                        </div>
+                    `;
+                } else {
+                    activePlatforms.forEach(platform => {
+                        const url = escapeHtml(socialLinks[platform.key].trim());
+                        const card = document.createElement('a');
+                        card.href = url;
+                        card.target = '_blank';
+                        card.rel = 'noopener noreferrer';
+                        card.className = `p-3 rounded-2xl border flex items-center gap-2.5 transition group ${platform.badgeClass}`;
+                        card.innerHTML = `
+                            <div class="w-8 h-8 rounded-xl bg-black/30 flex items-center justify-center text-sm shrink-0">
+                                <i class="${platform.icon}"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-black truncate">${escapeHtml(platform.label)}</p>
+                                <p class="text-[10px] opacity-80 truncate">${escapeHtml(platform.subtitle)}</p>
+                            </div>
+                        `;
+                        dashGrid.appendChild(card);
+                    });
+                }
+            }
+
+            // 3. Pulsante Modifica Link Social solo per Amministratore
+            const adminBtn = document.getElementById('admin-edit-social-btn');
+            if (adminBtn) {
+                const amIAdmin = isCurrentUserAdmin(getCurrentPilot());
+                adminBtn.classList.toggle('hidden', !amIAdmin);
+            }
+        }
+
+        function openSocialLinksModal() {
+            if (!isCurrentUserAdmin(getCurrentPilot())) {
+                showToast("Solo l'amministratore (tecchionicola@gmail.com) può modificare i link social.", "error");
+                return;
+            }
+            SOCIAL_PLATFORMS_CONFIG.forEach(p => {
+                const input = document.getElementById(`social-input-${p.key}`);
+                if (input) input.value = socialLinks[p.key] || '';
+            });
+            const modal = document.getElementById('social-links-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeSocialLinksModal() {
+            const modal = document.getElementById('social-links-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function handleSaveSocialLinks(e) {
+            e.preventDefault();
+            if (!isCurrentUserAdmin(getCurrentPilot())) {
+                showToast("Operazione riservata all'amministratore.", "error");
+                return;
+            }
+
+            const updated = {};
+            for (const p of SOCIAL_PLATFORMS_CONFIG) {
+                const rawVal = (document.getElementById(`social-input-${p.key}`)?.value || '').trim();
+                if (rawVal && !isSafeSocialHttpUrl(rawVal)) {
+                    showToast(`URL non valido per ${p.label}: usa http:// o https://`, "error");
+                    return;
+                }
+                updated[p.key] = rawVal;
+            }
+
+            socialLinks = updated;
+            saveState();
+            renderSocialLinks();
+            closeSocialLinksModal();
+            showToast("Link Social ufficiali aggiornati e sincronizzati sul Cloud!");
+        }
+
         function renderLoginPilots() {
             pilots.forEach(ensurePilotIdentityFields);
             const countEl = document.getElementById('total-pilots-count');
             if (countEl) countEl.textContent = String(pilots.length);
+            renderSocialLinks();
         }
 
         function findPilotByLoginIdentifier(identifier) {
@@ -3213,6 +3510,7 @@
             document.getElementById('chat-sender-badge').textContent = `Scrivi come ${me.name}`;
 
             renderDashboardData();
+            renderSocialLinks();
             renderChatMessages();
             renderMarketplace();
             renderRides();
@@ -4048,30 +4346,29 @@
             return [];
         }
 
-        function renderRideDateTimeRows(initialValues = []) {
-            const listEl = document.getElementById('ride-datetimes-list');
-            if (!listEl) return;
-            const values = Array.isArray(initialValues) && initialValues.length > 0
-                ? initialValues
-                : [getDefaultNextSundayIso(0)];
+        // Calcola lo stato temporale di un'uscita rispetto ad adesso:
+        // - 'upcoming': evento futuro o in corso
+        // - 'passed': evento già avvenuto (resta visibile; l'eliminazione o riapertura è gestita dall'amministratore)
+        function getRideLifecycleStatus(ride, nowMs = Date.now()) {
+            const isoList = getRideDateTimesArray(ride);
+            if (isoList.length === 0) return { status: 'upcoming', endTimestamp: null };
 
-            listEl.innerHTML = '';
-            values.forEach((val, idx) => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-1.5 bg-mud-950 border border-stone-700 rounded-xl px-2.5 py-1.5';
-                row.innerHTML = `
-                    <span class="px-1.5 py-0.5 rounded bg-quad-500/20 text-quad-400 text-[10px] font-black shrink-0">Giorno ${idx + 1}</span>
-                    <input type="datetime-local" value="${escapeHtml(val)}" required style="color-scheme: dark;"
-                           class="ride-datetime-item flex-1 min-w-0 bg-transparent text-xs text-white focus:outline-none">
-                    ${values.length > 1 ? `
-                        <button type="button" onclick="removeRideDateTimeRow(${idx})" title="Rimuovi giorno"
-                                class="text-red-400 hover:text-red-300 px-1 text-xs cursor-pointer shrink-0">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    ` : ''}
-                `;
-                listEl.appendChild(row);
+            let latestTimestamp = null;
+            isoList.forEach(iso => {
+                const parsed = new Date(iso).getTime();
+                if (!isNaN(parsed)) {
+                    if (latestTimestamp === null || parsed > latestTimestamp) {
+                        latestTimestamp = parsed;
+                    }
+                }
             });
+
+            if (latestTimestamp === null) return { status: 'upcoming', endTimestamp: null };
+
+            if (nowMs > latestTimestamp) {
+                return { status: 'passed', endTimestamp: latestTimestamp };
+            }
+            return { status: 'upcoming', endTimestamp: latestTimestamp };
         }
 
         function getCurrentFormDateTimes() {
@@ -4128,20 +4425,43 @@
 
         // Restituisce le classi Tailwind del badge difficoltà: Verde (Facile), Arancione (Media), Rosso (Difficile / Hard)
         function getDifficultyBadgeClass(difficultyText) {
-            const normalized = (difficultyText || '').toLowerCase();
-            if (normalized.includes('facile')) {
+            const lower = (difficultyText || '').toLowerCase();
+            if (lower.includes('facile')) {
                 return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
             }
-            if (normalized.includes('media')) {
-                return 'bg-orange-500/20 text-orange-300 border border-orange-500/40';
-            }
-            if (normalized.includes('difficile') || normalized.includes('hard')) {
+            if (lower.includes('hard') || lower.includes('difficile') || lower.includes('roccia')) {
                 return 'bg-red-500/20 text-red-300 border border-red-500/40';
             }
-            return 'bg-stone-800 text-stone-300 border border-stone-700';
+            return 'bg-quad-500/20 text-quad-400 border border-quad-500/40';
         }
 
-        function openNewRideForm(editRideId = null) {
+        function renderRideDateTimeRows(dateTimesList) {
+            const container = document.getElementById('ride-datetimes-list');
+            if (!container) return;
+            const list = (Array.isArray(dateTimesList) && dateTimesList.length > 0)
+                ? dateTimesList
+                : [getDefaultNextSundayIso(0)];
+
+            container.innerHTML = '';
+            list.forEach((isoVal, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-1.5 bg-mud-950 border border-stone-700 rounded-xl px-2.5 py-1.5';
+                row.innerHTML = `
+                    <span class="text-[10px] font-black text-quad-400 shrink-0">G${idx + 1}</span>
+                    <input type="datetime-local" required value="${escapeHtml(isoVal)}"
+                           class="ride-datetime-item flex-1 min-w-0 bg-transparent text-xs text-white focus:outline-none">
+                    ${list.length > 1 ? `
+                        <button type="button" onclick="removeRideDateTimeRow(${idx})" title="Rimuovi tappa"
+                                class="text-red-400 hover:text-red-300 text-xs px-1 cursor-pointer">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    ` : ''}
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function openNewRideForm(editRideId = null, reopenMode = false) {
             const me = getCurrentPilot();
             if (!me) return;
 
@@ -4160,12 +4480,25 @@
                     showToast("Non hai i permessi per modificare questa uscita.", "error");
                     return;
                 }
-                titleHeader.innerHTML = ride.authorId === me.id
-                    ? '<i class="fa-solid fa-pen text-quad-500"></i> Modifica Uscita Proposta'
-                    : '<i class="fa-solid fa-crown text-amber-400"></i> Modifica Uscita (Admin)';
+                if (reopenMode) {
+                    titleHeader.innerHTML = '<i class="fa-solid fa-rotate-left text-emerald-400"></i> Riapri Giro & Imposta Nuova Data (Admin)';
+                } else {
+                    titleHeader.innerHTML = ride.authorId === me.id
+                        ? '<i class="fa-solid fa-pen text-quad-500"></i> Modifica Uscita Proposta'
+                        : '<i class="fa-solid fa-crown text-amber-400"></i> Modifica Uscita (Admin)';
+                }
                 editIdInput.value = ride.id;
                 titleInput.value = ride.title;
-                renderRideDateTimeRows(getRideDateTimesArray(ride));
+
+                const existingDates = getRideDateTimesArray(ride);
+                if (reopenMode) {
+                    const countDays = Math.max(1, existingDates.length);
+                    const suggestedFutureDates = Array.from({ length: countDays }, (_, idx) => getDefaultNextSundayIso(idx));
+                    renderRideDateTimeRows(suggestedFutureDates);
+                } else {
+                    renderRideDateTimeRows(existingDates);
+                }
+
                 meetingInput.value = ride.meeting;
                 diffSelect.value = ride.difficulty || 'Media - Bosco & Fango';
                 if (notesInput) notesInput.value = ride.notes || '';
@@ -4177,7 +4510,7 @@
                 } else {
                     setRideProgramFormState('', '', '');
                 }
-                submitBtn.textContent = 'Aggiorna';
+                submitBtn.textContent = reopenMode ? 'Riapri & Salva' : 'Aggiorna';
             } else {
                 titleHeader.innerHTML = '<i class="fa-solid fa-calendar-plus text-quad-500"></i> Nuovo Percorso / Uscita Quad';
                 editIdInput.value = '';
@@ -4305,219 +4638,132 @@
 
         function downloadRidePoster(rideId) {
             const ride = rides.find(r => r.id === rideId);
-            if (!ride || !ride.posterDataUrl || !isSafeMediaUrl(ride.posterDataUrl)) {
-                showToast("Nessun programma JPG disponibile per questa uscita.", "error");
-                return;
-            }
-            try {
-                const safeBase = (ride.title || 'programma-uscita')
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '') || 'programma-uscita';
-                const extMatch = ride.posterDataUrl.match(/^data:image\/([a-zA-Z0-9+]+);/);
-                const ext = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'jpg';
-                const rawName = (ride.posterName || '').trim();
-                const hasExt = /\.[a-zA-Z0-9]{2,5}$/.test(rawName);
-                const fileName = hasExt ? rawName : `${safeBase}.${ext}`;
+            if (!ride) return;
 
-                const link = document.createElement('a');
-                link.href = ride.posterDataUrl;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showToast(`Download programma avviato: ${fileName}`);
-            } catch (err) {
-                showToast("Impossibile scaricare l'immagine in questo browser.", "error");
-            }
-        }
-
-        function downloadRidePdf(rideId) {
-            const ride = rides.find(r => r.id === rideId);
-            if (!ride || !ride.pdfDataUrl || !/^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(ride.pdfDataUrl.trim())) {
-                showToast("Nessun programma PDF disponibile per questa uscita.", "error");
-                return;
-            }
-            try {
-                const safeBase = (ride.title || 'programma-uscita')
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '') || 'programma-uscita';
-                const fileName = ride.pdfName && ride.pdfName.toLowerCase().endsWith('.pdf')
-                    ? ride.pdfName
-                    : `${safeBase}.pdf`;
-
+            if (ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(ride.pdfDataUrl)) {
                 const link = document.createElement('a');
                 link.href = ride.pdfDataUrl;
-                link.download = fileName;
+                link.download = ride.pdfName || 'programma-uscita.pdf';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                showToast(`Download programma avviato: ${fileName}`);
-            } catch (err) {
-                showToast("Impossibile scaricare il PDF in questo browser.", "error");
+                showToast("Download del programma PDF avviato!");
+                return;
             }
+
+            if (ride.posterDataUrl && isSafeMediaUrl(ride.posterDataUrl)) {
+                const link = document.createElement('a');
+                link.href = ride.posterDataUrl;
+                link.download = ride.posterName || 'programma-uscita.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("Download del programma JPG avviato!");
+                return;
+            }
+
+            showToast("Nessun programma PDF o JPG allegato a questa uscita.", "error");
         }
 
         function closeRideForm() {
             const panel = document.getElementById('new-ride-panel');
             if (panel) panel.classList.add('hidden');
+            document.getElementById('ride-edit-id').value = '';
             setRideProgramFormState('', '', '');
         }
 
         function handleSaveRide(e) {
-            if (e && typeof e.preventDefault === 'function') {
-                e.preventDefault();
-            }
+            e.preventDefault();
             const me = getCurrentPilot();
-            if (!me) {
-                showToast("Sessione pilota non attiva: effettua di nuovo l'accesso.", "error");
-                return;
-            }
-            if (isSavingRide) return;
+            if (!me) return;
+
             isSavingRide = true;
-
             try {
-                const formEl = (e && (e.currentTarget || e.target)) || document.querySelector('#new-ride-panel form');
-                const editId = (document.getElementById('ride-edit-id')?.value || '').trim();
-                const title = (document.getElementById('ride-title')?.value || '').trim();
-                if (!title) {
-                    isSavingRide = false;
-                    showToast("Inserisci il titolo dell'uscita.", "error");
-                    return;
-                }
-
+                const editId = document.getElementById('ride-edit-id').value;
+                const title = document.getElementById('ride-title').value.trim();
                 const dateTimesIso = getCurrentFormDateTimes().filter(Boolean);
-                if (dateTimesIso.length === 0) {
-                    isSavingRide = false;
-                    showToast("Seleziona almeno una data e ora di uscita.", "error");
-                    return;
-                }
-
-                const meetingVal = (document.getElementById('ride-meeting')?.value || '').trim();
-                if (!meetingVal) {
-                    isSavingRide = false;
-                    showToast("Inserisci il punto di ritrovo.", "error");
-                    return;
-                }
-
-                const firstDateTimeIso = dateTimesIso[0];
-                const formattedDates = dateTimesIso.map(formatRideDateTimeItalian);
-                const formattedDateSummary = formattedDates.join(' | ');
-                const difficulty = document.getElementById('ride-difficulty')?.value || 'Media - Bosco & Fango';
+                const meeting = document.getElementById('ride-meeting').value.trim();
+                const difficulty = document.getElementById('ride-difficulty').value;
                 const notes = (document.getElementById('ride-notes')?.value || '').trim();
-                const coordMatch = meetingVal.match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
 
-                const isImgProg = tempRideProgramType === 'image' && Boolean(tempRideProgramDataUrl);
-                const isPdfProg = tempRideProgramType === 'pdf' && Boolean(tempRideProgramDataUrl);
+                if (!title || dateTimesIso.length === 0 || !meeting) {
+                    showToast("Compila titolo, almeno una data/ora e punto di ritrovo.", "error");
+                    return;
+                }
 
-                const programFields = {
-                    posterDataUrl: isImgProg ? tempRideProgramDataUrl : '',
-                    posterName: isImgProg ? (tempRideProgramName || 'programma-uscita.jpg') : '',
-                    pdfDataUrl: isPdfProg ? tempRideProgramDataUrl : '',
-                    pdfName: isPdfProg ? (tempRideProgramName || 'programma-uscita.pdf') : ''
-                };
+                const formattedDates = dateTimesIso.map(formatRideDateTimeItalian);
+                const primaryDateFormatted = formattedDates.length > 1
+                    ? `${formattedDates[0]} → ${formattedDates[formattedDates.length - 1]} (${formattedDates.length} gg)`
+                    : formattedDates[0];
+
+                const pdfToSave = tempRideProgramType === 'pdf' ? tempRideProgramDataUrl : '';
+                const posterToSave = tempRideProgramType === 'image' ? tempRideProgramDataUrl : '';
 
                 if (editId) {
                     const idx = rides.findIndex(r => r.id === editId);
-                    if (idx === -1 || !canEditRide(rides[idx], me)) {
-                        isSavingRide = false;
-                        showToast("Operazione non consentita.", "error");
+                    if (idx === -1) return;
+                    if (!canEditRide(rides[idx], me)) {
+                        showToast("Non puoi modificare un'uscita creata da un altro pilota.", "error");
                         return;
                     }
                     rides[idx] = {
                         ...rides[idx],
                         title,
-                        date: formattedDateSummary,
-                        dateTimeIso: firstDateTimeIso,
+                        date: primaryDateFormatted,
                         dateTimesIso,
-                        meeting: meetingVal,
-                        lat: coordMatch ? parseFloat(coordMatch[1]) : null,
-                        lng: coordMatch ? parseFloat(coordMatch[2]) : null,
+                        formattedDates,
+                        dateTimeIso: dateTimesIso[0],
+                        meeting,
                         difficulty,
                         notes,
-                        ...programFields
+                        pdfDataUrl: pdfToSave,
+                        pdfName: pdfToSave ? (tempRideProgramName || 'programma-uscita.pdf') : '',
+                        posterDataUrl: posterToSave,
+                        posterName: posterToSave ? (tempRideProgramName || 'programma-uscita.jpg') : ''
                     };
-                    showToast("Uscita modificata e salvata per il gruppo!");
+                    showToast("Uscita aggiornata e sincronizzata!");
                 } else {
-                    const duplicateRecent = rides.some(r =>
-                        r.authorId === me.id &&
-                        r.title === title &&
-                        (r.dateTimeIso || '') === firstDateTimeIso &&
-                        (r.meeting || '') === meetingVal
-                    );
-                    if (duplicateRecent) {
-                        isSavingRide = false;
-                        showToast("Questa uscita è già stata salvata!");
-                        closeRideForm();
-                        renderRides();
-                        return;
-                    }
-
-                    const uniqueId = 'ride_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-                    const newRide = {
-                        id: uniqueId,
+                    rides.unshift({
+                        id: 'ride_' + Date.now(),
                         authorId: me.id,
                         title,
-                        date: formattedDateSummary,
-                        dateTimeIso: firstDateTimeIso,
+                        date: primaryDateFormatted,
                         dateTimesIso,
-                        meeting: meetingVal,
-                        lat: coordMatch ? parseFloat(coordMatch[1]) : null,
-                        lng: coordMatch ? parseFloat(coordMatch[2]) : null,
+                        formattedDates,
+                        dateTimeIso: dateTimesIso[0],
+                        meeting,
+                        lat: me.lat,
+                        lng: me.lng,
                         difficulty,
                         notes,
-                        ...programFields,
+                        pdfDataUrl: pdfToSave,
+                        pdfName: pdfToSave ? (tempRideProgramName || 'programma-uscita.pdf') : '',
+                        posterDataUrl: posterToSave,
+                        posterName: posterToSave ? (tempRideProgramName || 'programma-uscita.jpg') : '',
                         participants: [me.id]
-                    };
-                    rides.unshift(newRide);
-                    showToast("Nuova uscita quad salvata e pubblicata!");
+                    });
+                    showToast("Nuova uscita off-road pubblicata!");
                 }
 
                 saveState();
-                if (formEl && typeof formEl.reset === 'function') {
-                    formEl.reset();
-                }
                 closeRideForm();
                 renderRides();
-            } catch (err) {
-                console.error("Errore salvataggio uscita:", err);
-                showToast("Errore durante il salvataggio dell'uscita.", "error");
             } finally {
-                isSavingRide = false;
+                setTimeout(() => { isSavingRide = false; }, 250);
             }
-        }
-
-        function toggleRideParticipation(rideId) {
-            const me = getCurrentPilot();
-            if (!me) return;
-            const ride = rides.find(r => r.id === rideId);
-            if (!ride) return;
-            if (!Array.isArray(ride.participants)) ride.participants = [];
-
-            const idx = ride.participants.indexOf(me.id);
-            if (idx === -1) {
-                ride.participants.push(me.id);
-                showToast(`Partecipazione confermata per "${ride.title}"!`);
-            } else {
-                ride.participants.splice(idx, 1);
-                showToast(`Partecipazione rimossa da "${ride.title}".`);
-            }
-            saveState();
-            renderRides();
         }
 
         function confirmDeleteRide(rideId) {
             const me = getCurrentPilot();
             const ride = rides.find(r => r.id === rideId);
-            if (!me || !ride || !canEditRide(ride, me)) {
+            if (!ride || !canEditRide(ride, me)) {
                 showToast("Non hai i permessi per eliminare questa uscita.", "error");
                 return;
             }
 
             showCustomConfirm(
-                "Elimina Uscita",
-                `Sei sicuro di voler eliminare definitivamente "${ride.title}" dal calendario uscite?`,
+                "Elimina Uscita Off-Road",
+                `Sei sicuro di voler eliminare l'uscita "${ride.title}"?`,
                 () => {
                     rides = rides.filter(r => r.id !== rideId);
                     saveState();
@@ -4527,268 +4773,306 @@
             );
         }
 
-        function getRideEarliestTimestamp(ride) {
-            if (!ride) return Number.MAX_SAFE_INTEGER;
-            const isoList = getRideDateTimesArray(ride);
-            let minTs = Number.MAX_SAFE_INTEGER;
-            isoList.forEach(iso => {
-                const t = new Date(iso).getTime();
-                if (!isNaN(t) && t < minTs) {
-                    minTs = t;
-                }
-            });
-            return minTs;
-        }
-
         function renderRides() {
-            const container = document.getElementById('rides-list-container');
-            if (!container) return;
             const me = getCurrentPilot();
             const amIAdmin = isCurrentUserAdmin(me);
+            const container = document.getElementById('rides-list-container');
+            if (!container) return;
             container.innerHTML = '';
 
-            const safeRidesList = Array.isArray(rides) ? rides.filter(r => r && typeof r === 'object') : [];
-
-            if (safeRidesList.length === 0) {
+            if (rides.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-full bg-mud-900 border border-stone-800 rounded-3xl p-8 text-center space-y-2">
-                        <i class="fa-solid fa-route text-3xl text-stone-600"></i>
+                        <i class="fa-solid fa-calendar-xmark text-3xl text-stone-600"></i>
                         <p class="text-sm font-bold text-stone-300">Nessuna uscita in programma al momento</p>
-                        <p class="text-xs text-stone-500">Clicca su "Proponi Uscita" in alto a destra per creare il prossimo giro!</p>
+                        <p class="text-xs text-stone-500">Proponi tu un nuovo giro off-road per tutta la squadra!</p>
                     </div>
                 `;
                 return;
             }
 
-            const sortedRides = [...safeRidesList].sort((a, b) => {
-                const timeA = getRideEarliestTimestamp(a);
-                const timeB = getRideEarliestTimestamp(b);
-                if (timeA !== timeB) return timeA - timeB;
-                return String(a.title || '').localeCompare(String(b.title || ''));
-            });
+            const nowMs = Date.now();
 
-            sortedRides.forEach(ride => {
-                const author = pilots.find(p => p.id === ride.authorId) || { name: "Pilota Squadra" };
-                const isAuthor = me && ride.authorId === me.id;
-                const canManageRide = canEditRide(ride, me);
-                const participants = Array.isArray(ride.participants) ? ride.participants : [];
-                const isJoined = me && participants.includes(me.id);
+            rides.forEach(ride => {
+                const lifecycle = getRideLifecycleStatus(ride, nowMs);
+                const isPassed = lifecycle.status === 'passed';
+
+                const isJoined = me && Array.isArray(ride.participants) && ride.participants.includes(me.id);
+                const creator = pilots.find(p => p.id === ride.authorId);
+                const canManage = canEditRide(ride, me);
+                const canDeleteRide = amIAdmin || (!isPassed && ride.authorId === me?.id);
                 const gMapsUrl = buildGoogleMapsRideUrl(ride);
-
                 const safeId = escapeHtml(ride.id);
-                const safeTitle = escapeHtml(ride.title || 'Uscita Quad');
-                const rideIsoList = getRideDateTimesArray(ride);
-                const formattedDatesList = rideIsoList.length > 0
-                    ? rideIsoList.map(formatRideDateTimeItalian)
-                    : (ride.date ? [String(ride.date)] : []);
-                const safeMeeting = escapeHtml(ride.meeting || 'Da definire');
+                const safeTitle = escapeHtml(ride.title);
+                const safeDate = escapeHtml(ride.date);
+                const safeMeeting = escapeHtml(ride.meeting);
                 const safeDifficulty = escapeHtml(ride.difficulty || 'Media');
                 const difficultyBadgeClass = getDifficultyBadgeClass(ride.difficulty);
-                const safeNotes = escapeHtml(String(ride.notes || '').trim());
-                const safeAuthor = escapeHtml(author.name);
+                const safeNotes = escapeHtml(ride.notes || '');
+                const hasPdf = Boolean(ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(ride.pdfDataUrl));
                 const hasPoster = Boolean(ride.posterDataUrl && isSafeMediaUrl(ride.posterDataUrl));
+                const hasProgram = hasPdf || hasPoster;
                 const safePosterUrl = hasPoster ? escapeHtml(ride.posterDataUrl) : '';
-                const safePosterName = escapeHtml(ride.posterName || 'programma-uscita.jpg');
-                const hasPdf = Boolean(ride.pdfDataUrl && /^data:application\/pdf;base64,[a-zA-Z0-9+/=]+$/i.test(String(ride.pdfDataUrl).trim()));
                 const safePdfName = escapeHtml(ride.pdfName || 'programma-uscita.pdf');
+                const dateListToShow = Array.isArray(ride.formattedDates) && ride.formattedDates.length > 0
+                    ? ride.formattedDates
+                    : (getRideDateTimesArray(ride).length > 1 ? getRideDateTimesArray(ride).map(formatRideDateTimeItalian) : []);
 
-                const datesHtml = formattedDatesList.length > 1
-                    ? `<div class="flex flex-wrap gap-1.5 mt-1">
-                        ${formattedDatesList.map((dStr, idx) => `
-                            <span class="px-2 py-0.5 rounded-lg bg-quad-500/15 border border-quad-500/30 text-[11px] font-bold text-quad-300">
-                                <i class="fa-regular fa-calendar mr-1"></i>Giorno ${idx + 1}: ${escapeHtml(dStr)}
-                            </span>
-                        `).join('')}
-                       </div>`
-                    : `<span class="text-[11px] font-bold text-quad-400"><i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(formattedDatesList[0] || '')}</span>`;
-
-                const participantChips = participants.map(pid => {
-                    const p = pilots.find(item => item.id === pid);
-                    if (!p) return '';
-                    return `<span class="px-2 py-0.5 rounded-full bg-mud-950 border border-stone-700 text-[10px] font-semibold text-stone-200">${escapeHtml(p.name)}</span>`;
-                }).join('');
+                const participantNames = (ride.participants || [])
+                    .map(pid => pilots.find(p => p.id === pid)?.name.split(' ')[0])
+                    .filter(Boolean);
 
                 const card = document.createElement('div');
-                card.className = `bg-mud-900 border ${isAuthor ? 'border-quad-500/40' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4 shadow-lg`;
-
+                card.className = `bg-mud-900 border ${isPassed ? 'border-stone-800/80 opacity-90' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4 transition`;
                 card.innerHTML = `
                     <div class="space-y-2.5">
-                        ${hasPoster ? `
-                        <div class="relative rounded-2xl overflow-hidden border border-stone-800 bg-mud-950">
-                            <img src="${safePosterUrl}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="${safeTitle}"
-                                 class="w-full h-44 object-cover">
-                            <button type="button" onclick="downloadRidePoster('${safeId}')"
-                                    class="absolute bottom-2.5 right-2.5 px-3 py-1.5 rounded-xl bg-black/85 hover:bg-quad-600 text-white text-[11px] font-bold border border-stone-700 flex items-center gap-1.5 transition cursor-pointer">
-                                <i class="fa-solid fa-download"></i> Scarica Programma (JPG)
-                            </button>
-                        </div>` : ''}
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-1.5 mb-1">
-                                    ${isAuthor ? '<span class="px-2 py-0.5 rounded bg-quad-600 text-[9px] font-black text-white uppercase">Creata da Te</span>' : ''}
-                                    ${!isAuthor && amIAdmin ? '<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-black uppercase"><i class="fa-solid fa-crown mr-0.5"></i>Admin</span>' : ''}
-                                    ${formattedDatesList.length > 1 ? `<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-500/40 text-sky-300 text-[9px] font-black uppercase">${formattedDatesList.length} Giorni</span>` : ''}
-                                </div>
-                                ${datesHtml}
-                                <h3 class="text-base font-bold text-white mt-1">${safeTitle}</h3>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold ${difficultyBadgeClass}">
+                                    ${safeDifficulty}
+                                </span>
+                                ${isPassed ? `
+                                    <span class="px-2.5 py-1 rounded-lg bg-stone-800 border border-stone-600 text-stone-300 text-[10px] font-black uppercase flex items-center gap-1">
+                                        <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Già Passato
+                                    </span>
+                                ` : ''}
                             </div>
-                            <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold shrink-0 ${difficultyBadgeClass}">${safeDifficulty}</span>
-                        </div>
-                        <p class="text-xs text-stone-300"><i class="fa-solid fa-location-dot text-emerald-400 mr-1.5"></i>${safeMeeting}</p>
-                        ${safeNotes ? `
-                        <div class="bg-mud-950/90 border border-quad-500/30 rounded-xl px-3 py-2 text-xs text-stone-200 flex items-start gap-2">
-                            <i class="fa-solid fa-note-sticky text-quad-400 mt-0.5 shrink-0"></i>
-                            <div class="min-w-0">
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-quad-400 block">Note</span>
-                                <span class="leading-relaxed break-words">${safeNotes}</span>
-                            </div>
-                        </div>` : ''}
-                        <p class="text-[11px] text-stone-400">Proposta da: <strong class="text-stone-200">${safeAuthor}</strong></p>
-
-                        ${hasPdf ? `
-                        <div class="bg-mud-950/90 border border-emerald-500/30 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <i class="fa-solid fa-file-pdf text-red-400 text-sm shrink-0"></i>
-                                <span class="text-[11px] font-semibold text-stone-200 truncate">${safePdfName}</span>
-                            </div>
-                            <button type="button" onclick="downloadRidePdf('${safeId}')"
-                                    class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer">
-                                <i class="fa-solid fa-download"></i> Scarica Programma (PDF)
-                            </button>
-                        </div>` : ''}
-
-                        ${hasPoster ? `
-                        <div class="bg-mud-950/90 border border-quad-500/30 rounded-xl px-3 py-2 flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <i class="fa-solid fa-image text-quad-400 text-sm shrink-0"></i>
-                                <span class="text-[11px] font-semibold text-stone-200 truncate">${safePosterName}</span>
-                            </div>
-                            <button type="button" onclick="downloadRidePoster('${safeId}')"
-                                    class="px-2.5 py-1 rounded-lg bg-quad-600 hover:bg-quad-500 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer">
-                                <i class="fa-solid fa-download"></i> Scarica Programma (JPG)
-                            </button>
-                        </div>` : ''}
-
-                        <div class="pt-1">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
-                                Partecipanti Confermati (${participants.length})
-                            </p>
-                            <div class="flex flex-wrap gap-1.5">
-                                ${participantChips || '<span class="text-[11px] text-stone-500 italic">Nessun partecipante ancora</span>'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pt-3 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <button type="button" onclick="toggleRideParticipation('${safeId}')"
-                                    class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                                        isJoined
-                                            ? 'bg-forest-600 hover:bg-forest-500 text-white shadow-lg shadow-forest-600/20'
-                                            : 'bg-quad-600 hover:bg-quad-500 text-white shadow-lg shadow-quad-600/20'
-                                    }">
-                                <i class="fa-solid ${isJoined ? 'fa-check-circle' : 'fa-user-plus'}"></i>
-                                <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
-                            </button>
-
-                            <a href="${escapeHtml(gMapsUrl)}" target="_blank" rel="noopener noreferrer"
-                               class="px-3 py-2 rounded-xl bg-sky-300 hover:bg-sky-200 text-black text-xs font-bold flex items-center gap-1.5 transition">
-                                <i class="fa-solid fa-map-location-dot"></i>
-                                <span>Apri su Maps</span>
-                            </a>
-                        </div>
-
-                        ${canManageRide ? `
                             <div class="flex items-center gap-1.5">
-                                <button type="button" onclick="openNewRideForm('${safeId}')" title="Modifica uscita"
-                                        class="px-3 py-2 rounded-xl bg-stone-800 hover:bg-quad-600 text-stone-200 hover:text-white text-xs font-bold transition cursor-pointer">
-                                    <i class="fa-solid fa-pen"></i>
-                                </button>
-                                <button type="button" onclick="confirmDeleteRide('${safeId}')" title="Elimina uscita"
-                                        class="px-3 py-2 rounded-xl bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs font-bold transition cursor-pointer">
-                                    <i class="fa-solid fa-trash"></i>
+                                <span class="text-xs font-bold ${isPassed ? 'text-stone-400 line-through' : 'text-quad-400'}">
+                                    <i class="fa-regular fa-calendar mr-1"></i>${safeDate}
+                                </span>
+                                ${canManage ? `
+                                    <button type="button" onclick="openNewRideForm('${safeId}')" title="Modifica uscita"
+                                            class="w-7 h-7 rounded-lg bg-stone-800 hover:bg-quad-600 text-stone-200 hover:text-white text-xs flex items-center justify-center transition cursor-pointer">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                ` : ''}
+                                ${canDeleteRide ? `
+                                    <button type="button" onclick="confirmDeleteRide('${safeId}')" title="${amIAdmin ? 'Elimina uscita (Admin)' : 'Elimina uscita'}"
+                                            class="w-7 h-7 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 text-xs flex items-center justify-center transition cursor-pointer">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <h3 class="text-base font-bold ${isPassed ? 'text-stone-300' : 'text-white'}">${safeTitle}</h3>
+
+                        ${isPassed ? `
+                            <div class="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-300/90 flex flex-wrap items-center justify-between gap-2">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-flag-checkered text-amber-400 shrink-0"></i>
+                                    <span>Giro già svolto &bull; In attesa di gestione Admin</span>
+                                </span>
+                                ${amIAdmin ? `
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" onclick="openNewRideForm('${safeId}', true)"
+                                                class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black flex items-center gap-1 transition cursor-pointer">
+                                            <i class="fa-solid fa-rotate-left"></i> Riapri & Modifica Data
+                                        </button>
+                                        <button type="button" onclick="confirmDeleteRide('${safeId}')"
+                                                class="px-2.5 py-1 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-black flex items-center gap-1 transition cursor-pointer">
+                                            <i class="fa-solid fa-trash"></i> Elimina
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                        ${dateListToShow.length > 1 ? `
+                            <div class="flex flex-wrap gap-1.5">
+                                ${dateListToShow.map((dtLabel, dIdx) => `
+                                    <span class="px-2 py-0.5 rounded-md bg-mud-950 border border-stone-800 text-[10px] font-semibold text-stone-300">
+                                        <strong class="text-quad-400">G${dIdx + 1}:</strong> ${escapeHtml(dtLabel)}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <p class="text-xs text-stone-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-location-dot text-emerald-400"></i> Ritrovo: <strong>${safeMeeting}</strong>
+                        </p>
+
+                        ${safeNotes ? `
+                            <div class="bg-mud-950/90 border border-stone-800 rounded-xl p-2.5 text-[11px] text-stone-300 flex items-start gap-2">
+                                <i class="fa-solid fa-note-sticky text-quad-400 mt-0.5 shrink-0"></i>
+                                <span class="leading-relaxed">${safeNotes}</span>
+                            </div>
+                        ` : ''}
+
+                        ${hasProgram ? `
+                            <div class="bg-mud-950 border border-stone-800 rounded-2xl p-2.5 space-y-2">
+                                ${hasPoster ? `
+                                    <img src="${safePosterUrl}" onerror="this.style.display='none';" alt="Locandina ${safeTitle}"
+                                         class="w-full h-36 object-cover rounded-xl border border-stone-800 ${isPassed ? 'grayscale opacity-75' : ''}">
+                                ` : `
+                                    <div class="flex items-center gap-2.5 px-2 py-1.5">
+                                        <div class="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 flex items-center justify-center shrink-0">
+                                            <i class="fa-solid fa-file-pdf text-base"></i>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-xs font-bold text-white truncate">${safePdfName}</p>
+                                            <p class="text-[10px] text-stone-400">Documento PDF del programma allegato</p>
+                                        </div>
+                                    </div>
+                                `}
+                                <button type="button" onclick="downloadRidePoster('${safeId}')"
+                                        class="w-full py-1.5 px-3 rounded-xl bg-stone-800 hover:bg-emerald-600 text-emerald-300 hover:text-white text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                                    <i class="fa-solid fa-file-arrow-down"></i>
+                                    <span>${hasPdf ? 'Scarica Programma PDF' : 'Scarica Programma JPG'}</span>
                                 </button>
                             </div>
                         ` : ''}
+
+                        <p class="text-[11px] text-stone-500">
+                            Proposto da: <span class="text-stone-300 font-semibold">${escapeHtml(creator ? creator.name : 'Pilota')}</span>
+                        </p>
+                        <div class="pt-1">
+                            <p class="text-[11px] font-bold text-stone-400 mb-1.5">
+                                <i class="fa-solid fa-users text-quad-500 mr-1"></i> Partecipanti (${participantNames.length}):
+                            </p>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${participantNames.length > 0
+                                    ? participantNames.map(n => `<span class="px-2 py-0.5 rounded-md bg-mud-950 border border-stone-800 text-[11px] text-stone-200">${escapeHtml(n)}</span>`).join('')
+                                    : '<span class="text-[11px] text-stone-500">Nessun partecipante ancora</span>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 pt-3 border-t border-stone-800">
+                        <a href="${escapeHtml(gMapsUrl)}" target="_blank" rel="noopener noreferrer"
+                           class="px-3.5 py-2.5 rounded-xl bg-sky-300 hover:bg-sky-200 text-black text-xs font-bold flex items-center justify-center gap-1.5 transition shrink-0">
+                            <i class="fa-solid fa-diamond-turn-right"></i>
+                            <span>Google Maps</span>
+                        </a>
+                        ${isPassed ? `
+                            ${amIAdmin ? `
+                                <button type="button" onclick="openNewRideForm('${safeId}', true)"
+                                        class="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-forest-600 to-emerald-500 hover:from-forest-500 hover:to-emerald-400 text-white text-xs font-black flex items-center justify-center gap-2 shadow-lg shadow-forest-600/20 transition cursor-pointer">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                    <span>Riapri Giro & Cambia Data</span>
+                                </button>
+                            ` : `
+                                <div class="flex-1 py-2.5 px-3 rounded-xl bg-stone-800/80 border border-stone-700 text-stone-400 text-xs font-bold flex items-center justify-center gap-2 select-none">
+                                    <i class="fa-solid fa-flag-checkered text-stone-500"></i>
+                                    <span>Giro Concluso (Già Passato)</span>
+                                </div>
+                            `}
+                        ` : `
+                            <button type="button" onclick="toggleJoinRide('${safeId}')"
+                                    class="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                                        isJoined
+                                            ? 'bg-forest-600/20 text-emerald-400 border border-forest-500/40 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40'
+                                            : 'bg-quad-600 hover:bg-quad-500 text-white shadow-lg shadow-quad-600/20'
+                                    }">
+                                <i class="fa-solid ${isJoined ? 'fa-check-circle' : 'fa-flag-checkered'}"></i>
+                                <span>${isJoined ? 'Partecipi (Clicca per disdire)' : 'Partecipa all’Uscita'}</span>
+                            </button>
+                        `}
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // ==================== MAPPA PUNTO CASA & SALVATAGGIO GARAGE ====================
-        function initOrRefreshHomePickerMap() {
+        function toggleJoinRide(rideId) {
             const me = getCurrentPilot();
             if (!me) return;
+            const ride = rides.find(r => r.id === rideId);
+            if (!ride) return;
+
+            if (getRideLifecycleStatus(ride).status !== 'upcoming') {
+                showToast("Questo giro è già passato: non è più possibile modificare la partecipazione.", "error");
+                renderRides();
+                return;
+            }
+
+            if (!Array.isArray(ride.participants)) ride.participants = [];
+            const idx = ride.participants.indexOf(me.id);
+            if (idx >= 0) {
+                ride.participants.splice(idx, 1);
+                showToast("Hai disdetto la partecipazione all'uscita.");
+            } else {
+                ride.participants.push(me.id);
+                showToast("Partecipazione confermata! Ci vediamo in sella.");
+            }
+            saveState();
+            renderRides();
+        }
+
+        function initOrRefreshHomePickerMap() {
+            const me = getCurrentPilot();
+            if (!me || typeof L === 'undefined') return;
             const lat = parseFloat(document.getElementById('garage-lat').value) || me.lat || 45.3541;
             const lng = parseFloat(document.getElementById('garage-lng').value) || me.lng || 10.7336;
 
             try {
-                if (typeof L !== 'undefined') {
-                    const el = document.getElementById('profile-home-map');
-                    if (el && !homeMapInstance) {
-                        el.innerHTML = '';
-                        homeMapInstance = L.map('profile-home-map').setView([lat, lng], 12);
-                        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-                            maxZoom: 19,
-                            attribution: '&copy; Esri'
-                        }).addTo(homeMapInstance);
+                const el = document.getElementById('profile-home-map');
+                if (!el) return;
 
-                        homeMapInstance.on('click', function(ev) {
-                            setHomeCoordinates(ev.latlng.lat, ev.latlng.lng, null, false);
-                        });
-                    } else if (homeMapInstance) {
-                        homeMapInstance.invalidateSize();
-                        homeMapInstance.setView([lat, lng], 12);
-                    }
+                if (!homeMapInstance) {
+                    el.innerHTML = '';
+                    homeMapInstance = L.map('profile-home-map').setView([lat, lng], 12);
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 19,
+                        attribution: '&copy; Esri'
+                    }).addTo(homeMapInstance);
 
-                    if (homeMapInstance) {
-                        const homeIcon = L.divIcon({
-                            className: '',
-                            html: `<div class="home-gps-marker w-9 h-9 text-sm"><i class="fa-solid fa-house"></i></div>`,
-                            iconSize: [36, 36],
-                            iconAnchor: [18, 18]
-                        });
-                        if (homeMapMarker) {
-                            homeMapMarker.setLatLng([lat, lng]);
-                        } else {
-                            homeMapMarker = L.marker([lat, lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
-                            homeMapMarker.on('dragend', function(ev) {
-                                const pos = ev.target.getLatLng();
-                                setHomeCoordinates(pos.lat, pos.lng, null, false);
-                            });
-                        }
-                    }
+                    homeMapInstance.on('click', function(e) {
+                        updateHomeCoordinates(e.latlng.lat, e.latlng.lng, null, false);
+                    });
+                } else {
+                    homeMapInstance.invalidateSize();
+                    homeMapInstance.setView([lat, lng], 12);
+                }
+
+                const homeIcon = L.divIcon({
+                    className: '',
+                    html: '<div class="home-gps-marker w-9 h-9 text-sm"><i class="fa-solid fa-house"></i></div>',
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                });
+
+                if (homeMapMarker) {
+                    homeMapMarker.setLatLng([lat, lng]);
+                } else {
+                    homeMapMarker = L.marker([lat, lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
+                    homeMapMarker.on('dragend', function(ev) {
+                        const pos = ev.target.getLatLng();
+                        updateHomeCoordinates(pos.lat, pos.lng, null, false);
+                    });
                 }
             } catch (e) {}
         }
 
-        function setHomeCoordinates(lat, lng, cityLabel = null, recenter = true) {
-            const latInput = document.getElementById('garage-lat');
-            const lngInput = document.getElementById('garage-lng');
-            if (latInput) latInput.value = Number(lat).toFixed(6);
-            if (lngInput) lngInput.value = Number(lng).toFixed(6);
-            if (cityLabel) {
-                const cityInput = document.getElementById('garage-city');
-                if (cityInput) cityInput.value = cityLabel;
-            }
-            if (homeMapInstance && homeMapMarker) {
-                homeMapMarker.setLatLng([lat, lng]);
-                if (recenter) homeMapInstance.setView([lat, lng], 12);
-            }
-        }
+        function updateHomeCoordinates(lat, lng, cityLabel = null, recenter = true) {
+            const latNum = Number(lat);
+            const lngNum = Number(lng);
+            if (isNaN(latNum) || isNaN(lngNum)) return;
 
-        function setQuickHomeCoords(lat, lng, cityLabel) {
-            setHomeCoordinates(lat, lng, cityLabel, true);
-            showToast(`Punto casa impostato su ${cityLabel}`);
+            document.getElementById('garage-lat').value = latNum.toFixed(6);
+            document.getElementById('garage-lng').value = lngNum.toFixed(6);
+            if (cityLabel) {
+                document.getElementById('garage-city').value = cityLabel;
+            }
+
+            if (homeMapInstance && homeMapMarker) {
+                homeMapMarker.setLatLng([latNum, lngNum]);
+                if (recenter) homeMapInstance.setView([latNum, lngNum], 13);
+            }
         }
 
         function syncHomeMapFromInputs() {
             const lat = parseFloat(document.getElementById('garage-lat').value);
             const lng = parseFloat(document.getElementById('garage-lng').value);
             if (!isNaN(lat) && !isNaN(lng)) {
-                setHomeCoordinates(lat, lng, null, true);
+                updateHomeCoordinates(lat, lng, null, true);
             }
+        }
+
+        function setQuickHomeCoords(lat, lng, cityName) {
+            updateHomeCoordinates(lat, lng, cityName, true);
+            showToast(`Punto Casa impostato su ${cityName}`);
         }
 
         function detectDeviceGPSForHome() {
@@ -4799,11 +5083,11 @@
             showToast("Rilevamento posizione GPS di casa in corso...");
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    setHomeCoordinates(pos.coords.latitude, pos.coords.longitude, "Posizione GPS Casa", true);
-                    showToast("Coordinate GPS di casa rilevate! Premi 'Salva Dati & Posizione Casa'.");
+                    updateHomeCoordinates(pos.coords.latitude, pos.coords.longitude, "Posizione GPS Attuale", true);
+                    showToast("Coordinate GPS di casa rilevate! Premi Salva per confermare.");
                 },
                 () => {
-                    showToast("Impossibile rilevare il GPS: clicca sulla mappa per scegliere il punto casa.", "error");
+                    showToast("Impossibile leggere il GPS: clicca sulla mappa o inserisci le coordinate.", "error");
                 },
                 { enableHighAccuracy: true, timeout: 8000 }
             );
@@ -4820,75 +5104,62 @@
             const newEmail = document.getElementById('garage-email').value.trim().toLowerCase();
             const phone = document.getElementById('garage-phone').value.trim();
             const city = document.getElementById('garage-city').value.trim();
-            const newPin = (document.getElementById('garage-pin')?.value || me.pin || '1234').trim();
+            const newPin = (document.getElementById('garage-pin')?.value || '').trim();
             const lat = parseFloat(document.getElementById('garage-lat').value);
             const lng = parseFloat(document.getElementById('garage-lng').value);
 
             if (!firstName || !lastName || !newEmail) {
-                showToast("Nome, Cognome ed Email (Nickname univoco) sono obbligatori.", "error");
+                showToast("Compila Nome, Cognome e Email univoca.", "error");
                 return;
             }
 
             if (newPin.length < 4) {
-                showToast("Il PIN personale deve contenere almeno 4 caratteri.", "error");
-                document.getElementById('garage-pin')?.focus();
+                showToast("Il PIN personale deve essere di almeno 4 caratteri.", "error");
+                return;
+            }
+
+            const emailTaken = pilots.some(p => p.id !== me.id && (p.email || '').toLowerCase() === newEmail);
+            if (emailTaken) {
+                showToast("Questa Email è già in uso da un altro pilota!", "error");
                 return;
             }
 
             if (isPinAlreadyInUse(newPin, me.id)) {
                 showToast("Questo PIN è già in uso da un altro pilota! Scegli un PIN univoco.", "error");
-                document.getElementById('garage-pin')?.focus();
-                return;
-            }
-
-            const emailTakenByOther = pilots.some(p => p.id !== me.id && (p.email || '').toLowerCase() === newEmail);
-            if (emailTakenByOther) {
-                showToast("Questa Email è già in uso da un altro pilota del gruppo!", "error");
-                document.getElementById('garage-email').focus();
                 return;
             }
 
             me.firstName = firstName;
             me.lastName = lastName;
-            me.email = newEmail;
             me.name = `${firstName} ${lastName}`.trim();
-            me.phone = phone;
-            me.city = city;
+            me.email = newEmail;
+            me.phone = phone || me.phone;
+            me.city = city || me.city;
             me.pin = newPin;
-            if (!isNaN(lat) && !isNaN(lng)) {
-                me.lat = lat;
-                me.lng = lng;
-            }
+            if (!isNaN(lat)) me.lat = lat;
+            if (!isNaN(lng)) me.lng = lng;
 
-            ensurePilotVehicles(me);
             saveState();
+            renderLoginPilots();
             enterAppSession();
             switchTab('garage');
             showToast("Profilo, PIN univoco e punto GPS di casa salvati!");
         }
 
-        // ==================== AVVIO INIZIALIZZAZIONE ====================
-        (function init() {
-            const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
-            pilots.forEach(ensurePilotIdentityFields);
-            safeStorage.set('gq_pilots_v5', JSON.stringify(pilots));
-            safeStorage.set('gq_listings_v5', JSON.stringify(listings));
-            safeStorage.set('gq_rides_v5', JSON.stringify(rides));
-            safeStorage.set('gq_messages_v5', JSON.stringify(messages));
-
+        // ==================== AVVIO INIZIALE ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            pilots.forEach(ensurePilotVehicles);
+            sanitizeAllPhotosToQuadOnly();
             renderLoginPilots();
+            renderSocialLinks();
             startCloudSyncLoop();
-
-            if (hadLegacyPhotos && cloudDbBaseUrl) {
-                scheduleCloudPush(300);
-            }
 
             if (currentSessionPilotId && pilots.some(p => p.id === currentSessionPilotId)) {
                 enterAppSession();
             } else {
                 showLoginScreen();
             }
-        })();
+        });
     </script>
 </body>
 </html>
