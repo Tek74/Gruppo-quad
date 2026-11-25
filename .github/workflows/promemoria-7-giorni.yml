@@ -1,0 +1,29 @@
+name: Promemoria Giro -7 Giorni
+
+on:
+  schedule:
+    # Gira ogni giorno alle 08:00 UTC (09:00 ora italiana in inverno)
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Permette anche di lanciarlo a mano per testarlo subito
+
+jobs:
+  controlla-giri:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout codice
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installa Firebase Admin
+        run: npm install firebase-admin
+
+      - name: Esegui controllo giri a -7 giorni
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+        run: node scripts/promemoria-7-giorni.js
