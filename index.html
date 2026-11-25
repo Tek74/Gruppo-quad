@@ -57,6 +57,56 @@
     <script>
         const ONESIGNAL_APP_ID = "9688c438-a78a-4b8e-81ac-ce9d656d72a7";
         const ONESIGNAL_REST_API_KEY = "os_v2_app_s2emiofhrjfy5anmz2owk3lsu6m7zyxpbt2ecxvx7aulv4skuhvpfvvbp5yg6dlrk25pkmiqujk7q47hvxkjg3vb7henrss6nyhktmy";
+        window.oneSignalReady = false;
+        window.oneSignalSubscriptionId = null;
+
+        function isSandboxOrIframe() {
+            try {
+                return window.self !== window.top;
+            } catch (e) {
+                return true;
+            }
+        }
+
+        function isIosBrowser() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
+        function isStandalonePwa() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+
+        async function syncOneSignalUserIdentity(OneSignalInstance) {
+            try {
+                const me = typeof getCurrentPilot === 'function' ? getCurrentPilot() : null;
+                if (!OneSignalInstance || !OneSignalInstance.User) return;
+                if (me && me.email) {
+                    if (typeof OneSignalInstance.login === 'function') {
+                        await OneSignalInstance.login(me.email);
+                    }
+                    if (OneSignalInstance.User.addTags) {
+                        OneSignalInstance.User.addTags({
+                            pilot_id: me.id || '',
+                            pilot_name: me.name || '',
+                            pilot_city: me.city || ''
+                        });
+                    }
+                }
+                const subId = OneSignalInstance.User.PushSubscription?.id || null;
+                const optedIn = Boolean(OneSignalInstance.User.PushSubscription?.optedIn);
+                if (subId && me) {
+                    window.oneSignalSubscriptionId = subId;
+                    me.pushSubscriptionId = subId;
+                    me.pushOptedIn = optedIn;
+                    if (typeof saveState === 'function') saveState();
+                }
+                if (typeof updatePushBellButtonUI === 'function') {
+                    updatePushBellButtonUI(optedIn);
+                }
+            } catch (e) {
+                console.warn("Sync identità OneSignal:", e);
+            }
+        }
 
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
@@ -69,15 +119,24 @@
                     serviceWorkerPath: 'OneSignalSDKWorker.js',
                     notifyButton: { enable: false }
                 });
+                window.oneSignalReady = true;
+                await syncOneSignalUserIdentity(OneSignal);
+
                 if (OneSignal.User && OneSignal.User.PushSubscription) {
-                    OneSignal.User.PushSubscription.addEventListener("change", (event) => {
+                    OneSignal.User.PushSubscription.addEventListener("change", async (event) => {
+                        const opted = Boolean(event?.current?.optedIn);
+                        window.gqNotificationsEnabled = opted;
+                        await syncOneSignalUserIdentity(OneSignal);
                         if (typeof updatePushBellButtonUI === "function") {
-                            updatePushBellButtonUI(event.current.optedIn || window.gqNotificationsEnabled);
+                            updatePushBellButtonUI(opted);
                         }
                     });
                 }
             } catch (err) {
-                console.warn("OneSignal preview init:", err);
+                console.warn("OneSignal init warning:", err);
+                if (typeof updatePushBellButtonUI === "function") {
+                    updatePushBellButtonUI(false);
+                }
             }
         });
     </script>
@@ -616,7 +675,7 @@
                     <!-- Pulsante Notifiche Push Uscite (Abilitato di Default) -->
                     <button type="button" id="push-bell-btn" onclick="requestPushNotificationsPermission()"
                             class="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-400 flex items-center gap-1.5 transition cursor-pointer"
-                            title="Notifiche Push attive: clicca per inviare un test notifica o gestire gli avvisi">
+                            title="Gestisci notifiche push su questo telefono/dispositivo">
                         <i id="push-bell-icon" class="fa-solid fa-bell"></i>
                         <span id="push-bell-label" class="hidden sm:inline">Avvisi Attivi</span>
                     </button>
@@ -863,8 +922,8 @@
 
                     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
                         <div class="lg:col-span-8">
-                            <div id="quad-map" class="w-full h-[460px] z-10 border border-stone-700 bg-mud-950 flex items-center justify-center text-xs text-stone-500">
-                                Caricamento mappa interattiva...
+                            <div id="quad-map" style="height: 460px; min-height: 360px;" class="w-full z-10 rounded-2xl overflow-hidden border border-stone-700 bg-mud-950 relative">
+                                <div class="absolute inset-0 flex items-center justify-center text-xs text-stone-500 pointer-events-none">Caricamento mappa interattiva...</div>
                             </div>
                         </div>
                         <div class="lg:col-span-4 space-y-3">
@@ -1137,8 +1196,8 @@
                                         <button type="button" onclick="setQuickHomeCoords(45.3189, 10.6594, 'Volta Mantovana (MN)')" class="px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 cursor-pointer">Volta Mantovana</button>
                                     </div>
                                     
-                                    <div id="profile-home-map" class="w-full h-52 rounded-2xl border border-stone-700 z-10 bg-mud-950 flex items-center justify-center text-xs text-stone-500">
-                                        Caricamento mappa posizione casa...
+                                    <div id="profile-home-map" style="height: 220px; min-height: 210px;" class="w-full rounded-2xl overflow-hidden border border-stone-700 z-10 bg-mud-950 relative">
+                                        <div class="absolute inset-0 flex items-center justify-center text-xs text-stone-500 pointer-events-none">Caricamento mappa posizione casa...</div>
                                     </div>
 
                                     <div class="grid grid-cols-2 gap-3">
@@ -1471,11 +1530,11 @@
     </div>
 
     <script>
-        // ==================== STATO NOTIFICHE ABILITATE DI DEFAULT ====================
+        // ==================== STATO NOTIFICHE & CONTROLLO AMBIENTE ====================
         window.gqNotificationsEnabled = true;
         let pushBannerHideTimer = null;
 
-        function triggerPushBannerPreview(title, body, autoHideMs = 5200) {
+        function triggerPushBannerPreview(title, body, autoHideMs = 6500) {
             const banner = document.getElementById('push-notification-banner');
             const titleEl = document.getElementById('push-banner-title');
             const bodyEl = document.getElementById('push-banner-body');
@@ -1507,6 +1566,16 @@
             const label = document.getElementById('push-bell-label');
             if (!btn || !icon || !label) return;
 
+            const inSandbox = isSandboxOrIframe();
+            const swSupported = ('serviceWorker' in navigator);
+
+            if (inSandbox || !swSupported) {
+                btn.className = "px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 flex items-center gap-1.5 transition cursor-pointer";
+                icon.className = "fa-solid fa-triangle-exclamation";
+                label.textContent = "Solo Sito Diretto";
+                return;
+            }
+
             if (isOptedIn) {
                 btn.className = "px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-400 flex items-center gap-1.5 transition cursor-pointer";
                 icon.className = "fa-solid fa-bell";
@@ -1514,35 +1583,77 @@
             } else {
                 btn.className = "px-3 py-2 rounded-xl bg-quad-500/15 hover:bg-quad-600 border border-quad-500/40 text-xs font-bold text-quad-400 hover:text-white flex items-center gap-1.5 transition cursor-pointer";
                 icon.className = "fa-regular fa-bell";
-                label.textContent = "Attiva Avvisi";
+                label.textContent = "Attiva Push";
             }
         }
 
-        function requestPushNotificationsPermission() {
-            window.gqNotificationsEnabled = true;
-            updatePushBellButtonUI(true);
-            triggerPushBannerPreview(
-                "🏍️ Notifiche Push GRUPPOQUAD Attive",
-                "Avviso di prova: riceverai istantaneamente notifiche su nuovi giri, raduni e messaggi radio!",
-                5500
-            );
-            showToast("Avvisi Push attivi! Banner di anteprima mostrato in alto.");
+        async function requestPushNotificationsPermission() {
+            if (isSandboxOrIframe() || !('serviceWorker' in navigator)) {
+                triggerPushBannerPreview(
+                    "⚠️ Anteprima Sandbox: Push Disabilitate",
+                    "Per ricevere notifiche push sul telefono apri l'URL diretto di GitHub Pages (su iPhone usa Condividi → Aggiungi a schermata Home).",
+                    8500
+                );
+                showToast("Apri l'app direttamente dal link GitHub Pages per registrare il telefono!", "error");
+                return;
+            }
 
-            if (typeof Notification !== "undefined" && Notification.permission === "default") {
-                try { Notification.requestPermission().catch(() => {}); } catch (e) {}
+            if (isIosBrowser() && !isStandalonePwa()) {
+                triggerPushBannerPreview(
+                    "📱 iPhone / iPad: Aggiungi a Home",
+                    "Su iOS Safari tocca Condividi (quadrato con freccia) → 'Aggiungi alla schermata Home', poi apri l'app dall'icona e tocca 'Attiva Push'.",
+                    9000
+                );
+                showToast("Su iPhone aggiungi prima l'app alla schermata Home per attivare le push.", "error");
+                return;
+            }
+
+            if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+                triggerPushBannerPreview(
+                    "🔕 Permesso Bloccato nel Browser",
+                    "Hai bloccato le notifiche per questo sito. Vai nelle Impostazioni del browser → Notifiche → Consenti per questo sito.",
+                    8500
+                );
+                showToast("Notifiche bloccate nelle impostazioni del browser.", "error");
+                return;
             }
 
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(async function(OneSignal) {
                 try {
-                    if (OneSignal.Notifications) await OneSignal.Notifications.requestPermission();
-                    if (OneSignal.User && OneSignal.User.PushSubscription) await OneSignal.User.PushSubscription.optIn();
-                } catch (err) {}
+                    if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
+                        await OneSignal.Slidedown.promptPush({ force: true });
+                    } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
+                        await OneSignal.Notifications.requestPermission();
+                    }
+
+                    if (OneSignal.User && OneSignal.User.PushSubscription) {
+                        await OneSignal.User.PushSubscription.optIn();
+                    }
+
+                    await syncOneSignalUserIdentity(OneSignal);
+                    const optedIn = Boolean(OneSignal.User?.PushSubscription?.optedIn);
+                    window.gqNotificationsEnabled = optedIn;
+                    updatePushBellButtonUI(optedIn);
+
+                    if (optedIn) {
+                        triggerPushBannerPreview(
+                            "🏍️ Telefono Registrato alle Notifiche!",
+                            "Dispositivo collegato a GRUPPOQUAD: riceverai gli avvisi push anche ad app chiusa.",
+                            6000
+                        );
+                        showToast("Notifiche push attivate con successo su questo dispositivo!");
+                    } else {
+                        showToast("Conferma 'Consenti' nel popup del browser per ricevere le notifiche sul telefono.", "error");
+                    }
+                } catch (err) {
+                    console.warn("Errore attivazione push mobile:", err);
+                    showToast("Assicurati che il file OneSignalSDKWorker.js sia presente nella root del sito.", "error");
+                }
             });
         }
 
         async function sendNewRidePushNotification(authorName, rideTitle, rideDate, rideMeeting) {
-            // Mostra sempre il banner push interattivo in-app quando viene pubblicata un'uscita
             triggerPushBannerPreview(
                 "🏍️ Nuovo Giro GRUPPOQUAD!",
                 `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`,
@@ -1554,25 +1665,32 @@
                 return;
             }
             try {
+                const payload = {
+                    app_id: ONESIGNAL_APP_ID,
+                    included_segments: ["Subscribed Users", "Total Subscriptions"],
+                    headings: {
+                        it: "🏍️ Nuovo Giro GRUPPOQUAD!",
+                        en: "🏍️ Nuovo Giro GRUPPOQUAD!"
+                    },
+                    contents: {
+                        it: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`,
+                        en: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`
+                    },
+                    chrome_web_icon: "https://commons.wikimedia.org/wiki/Special:FilePath/Yamaha_Raptor.JPG?width=256",
+                    priority: 10
+                };
+
+                if (!isSandboxOrIframe() && window.location.href.startsWith('http')) {
+                    payload.url = window.location.href.split('#')[0];
+                }
+
                 await fetch("https://api.onesignal.com/notifications?c=push", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "Authorization": "Key " + ONESIGNAL_REST_API_KEY
                     },
-                    body: JSON.stringify({
-                        app_id: ONESIGNAL_APP_ID,
-                        included_segments: ["Total Subscriptions"],
-                        headings: {
-                            it: "🏍️ Nuovo Giro GRUPPOQUAD!",
-                            en: "🏍️ Nuovo Giro GRUPPOQUAD!"
-                        },
-                        contents: {
-                            it: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`,
-                            en: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`
-                        },
-                        url: window.location.href.split('#')[0]
-                    })
+                    body: JSON.stringify(payload)
                 });
             } catch (err) {
                 console.warn("Errore invio notifica push OneSignal:", err);
@@ -2089,8 +2207,10 @@
 
         let mapInstance = null;
         let mapMarkers = {};
+        let mapResizeObserver = null;
         let homeMapInstance = null;
         let homeMapMarker = null;
+        let homeMapResizeObserver = null;
         let tempVehiclePhotoDataUrl = "";
         let tempRideProgramDataUrl = "";
         let tempRideProgramType = "";
@@ -2966,6 +3086,9 @@
             if (dashBannerBg && pilot.avatar) dashBannerBg.src = pilot.avatar;
 
             updatePushBellButtonUI(window.gqNotificationsEnabled);
+            if (window.oneSignalReady && window.OneSignal) {
+                syncOneSignalUserIdentity(window.OneSignal);
+            }
             renderSocialLinks();
             renderDashboardData();
             renderChatMessages();
@@ -2974,7 +3097,7 @@
             populateGarageForm();
 
             if (showWelcomeToast) {
-                showToast(`Benvenuto in GRUPPOQUAD, ${pilot.name}! Notifiche attive.`);
+                showToast(`Benvenuto in GRUPPOQUAD, ${pilot.name}!`);
             }
         }
 
@@ -3177,10 +3300,14 @@
             });
 
             if (tabName === 'map') {
-                setTimeout(() => initOrRefreshFriendsMap(), 80);
+                setTimeout(() => initOrRefreshFriendsMap(), 60);
+                setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(true); }, 200);
+                setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(true); }, 450);
             } else if (tabName === 'garage') {
                 populateGarageForm();
-                setTimeout(() => initOrRefreshHomeMap(), 80);
+                setTimeout(() => initOrRefreshHomeMap(), 60);
+                setTimeout(() => { if (homeMapInstance) homeMapInstance.invalidateSize(true); }, 200);
+                setTimeout(() => { if (homeMapInstance) homeMapInstance.invalidateSize(true); }, 450);
             } else if (tabName === 'radio') {
                 renderChatMessages();
             }
@@ -3319,6 +3446,27 @@
         }
 
         // ==================== VISTA 2: MAPPA AMICI & GPS ====================
+        function attachResilientTileLayer(leafletMap) {
+            const primaryLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19,
+                crossOrigin: true
+            });
+            let fallbackActivated = false;
+            primaryLayer.on('tileerror', () => {
+                if (fallbackActivated) return;
+                fallbackActivated = true;
+                try {
+                    leafletMap.removeLayer(primaryLayer);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; OpenStreetMap &copy; CARTO',
+                        maxZoom: 19
+                    }).addTo(leafletMap);
+                } catch (e) {}
+            });
+            primaryLayer.addTo(leafletMap);
+        }
+
         function initOrRefreshFriendsMap() {
             const me = getCurrentPilot();
             if (!me) return;
@@ -3328,18 +3476,27 @@
             if (homeLabel) homeLabel.textContent = me.city;
 
             const mapContainer = document.getElementById('quad-map');
-            if (!mapContainer) return;
+            if (!mapContainer || typeof L === 'undefined') return;
 
             if (!mapInstance) {
                 mapContainer.innerHTML = '';
-                mapInstance = L.map('quad-map').setView([me.lat, me.lng], 11);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap &copy; CARTO',
-                    maxZoom: 18
-                }).addTo(mapInstance);
-            } else {
-                mapInstance.invalidateSize();
+                mapInstance = L.map(mapContainer, {
+                    zoomControl: true,
+                    attributionControl: true
+                }).setView([me.lat, me.lng], 11);
+
+                attachResilientTileLayer(mapInstance);
+
+                if (typeof ResizeObserver !== 'undefined' && !mapResizeObserver) {
+                    mapResizeObserver = new ResizeObserver(() => {
+                        if (mapInstance) mapInstance.invalidateSize(true);
+                    });
+                    mapResizeObserver.observe(mapContainer);
+                }
             }
+
+            setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(true); }, 150);
+            setTimeout(() => { if (mapInstance) mapInstance.invalidateSize(true); }, 400);
 
             Object.values(mapMarkers).forEach(m => mapInstance.removeLayer(m));
             mapMarkers = {};
@@ -4346,15 +4503,23 @@
             const me = getCurrentPilot();
             if (!me) return;
             const container = document.getElementById('profile-home-map');
-            if (!container) return;
+            if (!container || typeof L === 'undefined') return;
 
             if (!homeMapInstance) {
                 container.innerHTML = '';
-                homeMapInstance = L.map('profile-home-map').setView([me.lat, me.lng], 12);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap',
-                    maxZoom: 18
-                }).addTo(homeMapInstance);
+                homeMapInstance = L.map(container, {
+                    zoomControl: true,
+                    attributionControl: true
+                }).setView([me.lat, me.lng], 12);
+
+                attachResilientTileLayer(homeMapInstance);
+
+                if (typeof ResizeObserver !== 'undefined' && !homeMapResizeObserver) {
+                    homeMapResizeObserver = new ResizeObserver(() => {
+                        if (homeMapInstance) homeMapInstance.invalidateSize(true);
+                    });
+                    homeMapResizeObserver.observe(container);
+                }
 
                 const homeIcon = L.divIcon({
                     html: `<div class="home-gps-marker w-9 h-9"><i class="fa-solid fa-house-chimney text-xs"></i></div>`,
@@ -4376,10 +4541,12 @@
                     document.getElementById('garage-lng').value = ev.latlng.lng.toFixed(5);
                 });
             } else {
-                homeMapInstance.invalidateSize();
                 homeMapInstance.setView([me.lat, me.lng], 12);
                 if (homeMapMarker) homeMapMarker.setLatLng([me.lat, me.lng]);
             }
+
+            setTimeout(() => { if (homeMapInstance) homeMapInstance.invalidateSize(true); }, 150);
+            setTimeout(() => { if (homeMapInstance) homeMapInstance.invalidateSize(true); }, 400);
         }
 
         function setQuickHomeCoords(lat, lng, cityLabel) {
@@ -4458,6 +4625,16 @@
             renderLoginPilots();
             renderSocialLinks();
             startCloudSyncLoop();
+
+            if (isSandboxOrIframe() || !('serviceWorker' in navigator)) {
+                window.gqNotificationsEnabled = false;
+                updatePushBellButtonUI(false);
+            }
+
+            window.addEventListener('resize', () => {
+                if (mapInstance) mapInstance.invalidateSize(true);
+                if (homeMapInstance) homeMapInstance.invalidateSize(true);
+            });
 
             const activePilot = getCurrentPilot() || pilots[0];
             if (activePilot) {
