@@ -1076,6 +1076,20 @@
 
             <!-- ==================== VISTA 5: MIO PROFILO, GARAGE MULTI-MEZZO & PUNTO GPS CASA ==================== -->
             <div id="tab-garage" class="tab-content hidden">
+                <section id="admin-management-panel" class="hidden max-w-5xl mx-auto mb-6 bg-mud-900 border border-quad-500/40 rounded-3xl p-5 shadow-xl">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div>
+                            <span class="text-[10px] font-black uppercase tracking-widest text-quad-400">Area riservata</span>
+                            <h2 class="text-xl font-black text-white"><i class="fa-solid fa-user-shield text-quad-500 mr-2"></i>Amministrazione GRUPPOQUAD</h2>
+                            <p class="text-xs text-stone-400 mt-1">Gestione completa dei profili e dei contenuti della squadra.</p>
+                        </div>
+                        <span class="px-3 py-1.5 rounded-xl bg-quad-500/15 border border-quad-500/30 text-quad-300 text-[10px] font-bold">ADMIN: NICOLA TECCHIO</span>
+                    </div>
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 text-[11px] text-amber-200">
+                        Modifica profilo: puoi intervenire su tutti i campi e parametri del partecipante. La cancellazione rimuove anche annunci, messaggi e uscite creati da quel profilo.
+                    </div>
+                    <div id="admin-pilots-list" class="space-y-3"></div>
+                </section>
                 <div class="max-w-5xl mx-auto bg-mud-900 border border-stone-800 rounded-3xl overflow-hidden shadow-xl">
                     <div class="relative h-44 bg-mud-950">
                         <img id="garage-quad-photo" src="" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="Il mio Mezzo Attivo" class="w-full h-full object-cover opacity-70">
@@ -2175,7 +2189,7 @@
         let socialLinks = loadParsedObject('gq_social_links_v5', DEFAULT_SOCIAL_LINKS);
 
         // Imposta automaticamente Nicola Tecchio come utente connesso nell'anteprima con notifiche attive
-        let currentSessionPilotId = safeStorage.getSession('gq_active_pilot_id') || 'pilot_nicola';
+        let currentSessionPilotId = safeStorage.getSession('gq_active_pilot_id') || null;
 
         let mapInstance = null;
         let mapMarkers = {};
@@ -2972,6 +2986,186 @@
             showToast("Link social aggiornati e sincronizzati con il gruppo!");
         }
 
+        // ==================== AMMINISTRAZIONE COMPLETA ====================
+        function adminField(label, field, value, type = 'text', extra = '') {
+            const safeValue = value === undefined || value === null ? '' : String(value);
+            return `<label class="block min-w-0"><span class="block text-[10px] uppercase tracking-wide font-bold text-stone-400 mb-1">${label}</span><input data-admin-field="${field}" type="${type}" value="${escapeHtml(safeValue)}" ${extra} class="w-full min-w-0 bg-mud-950 border border-stone-700 rounded-xl px-3 py-2.5 text-sm text-stone-100 focus:border-quad-500 focus:outline-none"></label>`;
+        }
+
+        function renderAdminManagementPanel() {
+            const panel = document.getElementById('admin-management-panel');
+            const list = document.getElementById('admin-pilots-list');
+            const admin = isCurrentUserAdmin();
+            if (!panel || !list) return;
+            panel.classList.toggle('hidden', !admin);
+            if (!admin) { list.innerHTML = ''; return; }
+            list.innerHTML = pilots.map(p => {
+                ensurePilotIdentityFields(p);
+                const protectedAdmin = isPilotAdmin(p);
+                const editorId = `admin-editor-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+                const vehiclesHtml = (Array.isArray(p.vehicles) ? p.vehicles : []).map((v, i) => `
+                    <div class="admin-vehicle-card bg-mud-950/80 border border-stone-700 rounded-xl p-3" data-admin-vehicle-id="${escapeHtml(String(v.id || `veh_${p.id}_${i+1}`))}">
+                        <div class="flex items-center justify-between gap-2 mb-3"><span class="text-xs font-extrabold text-quad-300">MEZZO ${i + 1}</span><button type="button" onclick="adminRemoveVehicle('${escapeHtml(String(p.id))}', ${i})" class="text-[10px] font-bold text-red-300 hover:text-red-200 px-2 py-1 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash mr-1"></i>Rimuovi</button></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${adminField('Tipologia', 'type', v.type || 'Quad / ATV')}
+                            ${adminField('Modello', 'model', v.model || '')}
+                            ${adminField('Cilindrata (cc)', 'cc', v.cc ?? '', 'number', 'min="0" step="1"')}
+                            ${adminField('Pressione gomme', 'tirePressure', v.tirePressure || '')}
+                            ${adminField('Trazione', 'drive', v.drive || '')}
+                            ${adminField('Foto mezzo (URL)', 'photo', v.photo || '')}
+                        </div>
+                    </div>`).join('');
+                return `
+                    <div class="bg-mud-950 border border-stone-800 rounded-2xl p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="font-bold text-white text-sm">${escapeHtml(p.name)}</div>
+                                <div class="text-[11px] text-stone-400 break-all">${escapeHtml(p.email)} · ${escapeHtml(p.city || 'Città non indicata')}</div>
+                                <div class="text-[10px] text-stone-500 mt-1">${Array.isArray(p.vehicles) ? p.vehicles.length : 0} mezzi · ID: ${escapeHtml(String(p.id))}</div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="openAdminPilotEditor('${escapeHtml(String(p.id))}')" class="px-3 py-2 rounded-lg bg-quad-600 hover:bg-quad-500 text-white text-[11px] font-bold"><i class="fa-solid fa-pen mr-1"></i>Modifica profilo</button>
+                                ${protectedAdmin ? '<span class="px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-300 text-[10px] font-bold">Amministratore</span>' : `<button type="button" onclick="adminDeletePilot('${escapeHtml(String(p.id))}')" class="px-3 py-2 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-300 hover:text-white text-[11px] font-bold"><i class="fa-solid fa-trash mr-1"></i>Elimina profilo</button>`}
+                            </div>
+                        </div>
+                        <div id="${editorId}" class="hidden mt-4 border-t border-stone-800 pt-4 space-y-4">
+                            <section class="space-y-3">
+                                <div class="flex items-center gap-2"><i class="fa-solid fa-user text-quad-400"></i><h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-200">Dati partecipante</h4></div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    ${adminField('Nome', 'firstName', p.firstName || '')}
+                                    ${adminField('Cognome', 'lastName', p.lastName || '')}
+                                    ${adminField('Email', 'email', p.email || '', 'email')}
+                                    ${adminField('Telefono', 'phone', p.phone || '', 'tel')}
+                                    ${adminField('Città / Comune', 'city', p.city || '')}
+                                    ${adminField('Ruolo', 'role', p.role || '')}
+                                    ${adminField('PIN di accesso', 'pin', p.pin || '')}
+                                    ${adminField('Stato', 'status', p.status || '')}
+                                    ${adminField('Foto profilo (URL)', 'avatar', p.avatar || '')}
+                                    ${adminField('Livello carburante (%)', 'fuel', p.fuel ?? '', 'number', 'min="0" max="100" step="1"')}
+                                    ${adminField('Latitudine GPS', 'lat', p.lat ?? '', 'number', 'step="any"')}
+                                    ${adminField('Longitudine GPS', 'lng', p.lng ?? '', 'number', 'step="any"')}
+                                </div>
+                                ${protectedAdmin ? `<p class="text-[10px] text-emerald-300"><i class="fa-solid fa-lock mr-1"></i>Profilo amministratore protetto: l'email non può essere cambiata e il profilo non può essere eliminato.</p>` : ''}
+                            </section>
+                            <section class="space-y-3">
+                                <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex items-center gap-2"><i class="fa-solid fa-truck-monster text-quad-400"></i><h4 class="text-xs font-extrabold uppercase tracking-wider text-stone-200">Garage e mezzi</h4></div><button type="button" onclick="adminAddVehicle('${escapeHtml(String(p.id))}')" class="px-3 py-2 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] font-bold"><i class="fa-solid fa-plus mr-1"></i>Aggiungi mezzo</button></div>
+                                <label class="block"><span class="block text-[10px] uppercase tracking-wide font-bold text-stone-400 mb-1">Mezzo principale</span><select data-admin-field="activeVehicleId" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2.5 text-sm text-stone-100 focus:border-quad-500 focus:outline-none">${(p.vehicles || []).map((v,i)=>`<option value="${escapeHtml(String(v.id))}" ${v.id === p.activeVehicleId ? 'selected' : ''}>${escapeHtml(v.model || `Mezzo ${i+1}`)}</option>`).join('')}</select></label>
+                                <div class="admin-vehicles-list space-y-3">${vehiclesHtml || '<p class="text-xs text-stone-500">Nessun mezzo inserito.</p>'}</div>
+                            </section>
+                            <div class="flex flex-wrap justify-end gap-2 border-t border-stone-800 pt-3">
+                                <button type="button" onclick="closeAdminPilotEditor('${escapeHtml(String(p.id))}')" class="px-4 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs font-bold">Annulla</button>
+                                <button type="button" onclick="saveAdminPilotEditor('${escapeHtml(String(p.id))}')" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"><i class="fa-solid fa-floppy-disk mr-1"></i>Salva modifiche</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function getAdminEditorId(pilotId) {
+            return `admin-editor-${String(pilotId).replace(/[^a-zA-Z0-9_-]/g, '')}`;
+        }
+        function openAdminPilotEditor(pilotId) {
+            if (!isCurrentUserAdmin()) return showToast('Operazione riservata all’amministratore.', 'error');
+            const el = document.getElementById(getAdminEditorId(pilotId));
+            if (el) el.classList.remove('hidden');
+        }
+        function closeAdminPilotEditor(pilotId) {
+            document.getElementById(getAdminEditorId(pilotId))?.classList.add('hidden');
+        }
+        function adminAddVehicle(pilotId) {
+            if (!isCurrentUserAdmin()) return;
+            const editor = document.getElementById(getAdminEditorId(pilotId));
+            const list = editor?.querySelector('.admin-vehicles-list');
+            const select = editor?.querySelector('[data-admin-field="activeVehicleId"]');
+            if (!editor || !list || !select) return;
+            const newId = `veh_${String(pilotId).replace(/[^a-zA-Z0-9_-]/g, '')}_${Date.now()}`;
+            const index = list.querySelectorAll('.admin-vehicle-card').length + 1;
+            const card = document.createElement('div');
+            card.className = 'admin-vehicle-card bg-mud-950/80 border border-stone-700 rounded-xl p-3';
+            card.dataset.adminVehicleId = newId;
+            card.innerHTML = `<div class="flex items-center justify-between gap-2 mb-3"><span class="text-xs font-extrabold text-quad-300">NUOVO MEZZO</span><button type="button" onclick="adminRemoveVehicle('${escapeHtml(String(pilotId))}', '${newId}')" class="text-[10px] font-bold text-red-300 hover:text-red-200 px-2 py-1 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash mr-1"></i>Rimuovi</button></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${adminField('Tipologia', 'type', 'Quad / ATV')}${adminField('Modello', 'model', '')}${adminField('Cilindrata (cc)', 'cc', '', 'number', 'min="0" step="1"')}${adminField('Pressione gomme', 'tirePressure', '')}${adminField('Trazione', 'drive', '')}${adminField('Foto mezzo (URL)', 'photo', '')}</div>`;
+            list.querySelector('p')?.remove();
+            list.appendChild(card);
+            const option = document.createElement('option'); option.value = newId; option.textContent = `Nuovo mezzo ${index}`; select.appendChild(option); select.value = newId;
+        }
+        function adminRemoveVehicle(pilotId, vehicleId) {
+            if (!isCurrentUserAdmin()) return;
+            const editor = document.getElementById(getAdminEditorId(pilotId));
+            const list = editor?.querySelector('.admin-vehicles-list');
+            const select = editor?.querySelector('[data-admin-field="activeVehicleId"]');
+            if (!editor || !list || !select) return;
+            const cards = [...list.querySelectorAll('.admin-vehicle-card')];
+            if (cards.length <= 1) return showToast('Ogni partecipante deve avere almeno un mezzo. Puoi modificarne i dati.', 'error');
+            const card = cards.find(el => el.dataset.adminVehicleId === String(vehicleId));
+            if (!card) return;
+            const wasActive = select.value === String(vehicleId);
+            card.remove();
+            [...select.options].find(o => o.value === String(vehicleId))?.remove();
+            if (wasActive) select.value = select.options[0]?.value || '';
+        }
+        function saveAdminPilotEditor(pilotId) {
+            if (!isCurrentUserAdmin()) return;
+            const target = pilots.find(x => String(x.id) === String(pilotId));
+            const editor = document.getElementById(getAdminEditorId(pilotId));
+            if (!target || !editor) return;
+            const read = (field) => editor.querySelector(`[data-admin-field="${field}"]`)?.value ?? '';
+            const email = String(read('email')).trim().toLowerCase();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showToast('Inserisci un indirizzo email valido.', 'error');
+            if (isPilotAdmin(target) && email !== ADMIN_EMAIL) return showToast('L’email dell’amministratore non può essere modificata.', 'error');
+            if (pilots.some(x => String(x.id) !== String(target.id) && (x.email || '').trim().toLowerCase() === email)) return showToast('Questa email è già utilizzata da un altro partecipante.', 'error');
+            const numberField = (field, fallback = 0) => { const value = read(field).trim(); return value === '' ? fallback : Number(value); };
+            const lat = numberField('lat', target.lat || 0), lng = numberField('lng', target.lng || 0);
+            if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lng) || lng < -180 || lng > 180) return showToast('Coordinate GPS non valide.', 'error');
+            const vehicles = [...editor.querySelectorAll('.admin-vehicle-card')].map((card, i) => {
+                const get = field => card.querySelector(`[data-admin-field="${field}"]`)?.value ?? '';
+                const oldId = card.dataset.adminVehicleId;
+                const old = target.vehicles?.find(v => String(v.id) === String(oldId)) || {};
+                return { ...old, id: oldId || old.id || `veh_${target.id}_${Date.now()}_${i}`, type: get('type').trim(), model: get('model').trim(), cc: get('cc') === '' ? '' : Number(get('cc')), tirePressure: get('tirePressure').trim(), drive: get('drive').trim(), photo: get('photo').trim() };
+            });
+            if (!vehicles.length) return showToast('Inserisci almeno un mezzo nel garage.', 'error');
+            if (vehicles.some(v => !v.model)) return showToast('Indica il modello di ogni mezzo.', 'error');
+            const oldEmail = target.email;
+            target.firstName = read('firstName').trim();
+            target.lastName = read('lastName').trim();
+            if (!target.firstName || !target.lastName) return showToast('Nome e cognome sono obbligatori.', 'error');
+            target.name = `${target.firstName} ${target.lastName}`.trim();
+            target.email = email;
+            target.phone = read('phone').trim();
+            target.city = read('city').trim();
+            target.role = read('role').trim();
+            target.pin = read('pin').trim();
+            target.status = read('status').trim();
+            target.avatar = read('avatar').trim();
+            target.fuel = Math.max(0, Math.min(100, numberField('fuel', target.fuel || 0)));
+            target.lat = lat; target.lng = lng;
+            target.vehicles = vehicles;
+            const requestedActive = read('activeVehicleId');
+            target.activeVehicleId = vehicles.some(v => String(v.id) === String(requestedActive)) ? requestedActive : vehicles[0].id;
+            ensurePilotIdentityFields(target);
+            if (oldEmail !== target.email && isPilotAdmin(target)) target.email = ADMIN_EMAIL;
+            saveState();
+            renderAdminManagementPanel();
+            renderDashboardData(); renderMarketplace(); renderRides(); renderChatMessages(); renderLoginPilots();
+            if (getCurrentPilot()?.id === target.id) enterAppSession(target, false);
+            showToast(`Profilo di ${target.name} aggiornato.`);
+        }
+        function adminDeletePilot(pilotId) {
+            if (!isCurrentUserAdmin()) return;
+            const target = pilots.find(x => String(x.id) === String(pilotId));
+            if (!target || isPilotAdmin(target)) return showToast('Il profilo amministratore è protetto.', 'error');
+            showCustomConfirm('Elimina partecipante', `Vuoi eliminare definitivamente ${target.name} e i suoi contenuti? Verranno rimossi anche annunci, messaggi Radio, uscite create e iscrizioni alle uscite.`, () => {
+                pilots = pilots.filter(x => x.id !== target.id);
+                listings = listings.filter(x => x.authorId !== target.id);
+                messages = messages.filter(x => x.senderId !== target.id);
+                rides = rides.filter(x => x.authorId !== target.id);
+                rides.forEach(r => { if (Array.isArray(r.participants)) r.participants = r.participants.filter(id => id !== target.id); });
+                if (currentSessionPilotId === target.id) { currentSessionPilotId = null; safeStorage.removeSession('gq_active_pilot_id'); }
+                saveState();
+                renderAdminManagementPanel(); renderDashboardData(); renderMarketplace(); renderRides(); renderChatMessages(); renderLoginPilots();
+                showToast(`Profilo di ${target.name} eliminato con i relativi contenuti.`);
+            });
+        }
+
         // ==================== LOGIN, SESSIONE & RIPRISTINO PIN ====================
         function renderLoginPilots() {
             const countEl = document.getElementById('total-pilots-count');
@@ -3050,6 +3244,7 @@
                 syncOneSignalUserIdentity(window.OneSignal);
             }
             renderSocialLinks();
+            renderAdminManagementPanel();
             renderDashboardData();
             renderChatMessages();
             renderMarketplace();
@@ -3626,6 +3821,10 @@
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
                                 ${isMine ? `
+                                    <button type="button" onclick="openListingModal('${escapeHtml(item.id)}')" title="Modifica annuncio"
+                                            class="px-2.5 py-1.5 rounded-xl bg-quad-500/15 hover:bg-quad-600 text-quad-300 text-[10px] font-bold cursor-pointer">
+                                        Modifica
+                                    </button>
                                     <button type="button" onclick="toggleListingSoldStatus('${escapeHtml(item.id)}')" title="Segna Venduto/Disponibile"
                                             class="px-2.5 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-[10px] font-bold cursor-pointer">
                                         ${isSold ? 'Riapri' : 'Venduto'}
@@ -3653,7 +3852,8 @@
 
         function toggleListingSoldStatus(itemId) {
             const item = listings.find(l => l.id === itemId);
-            if (!item) return;
+            const me = getCurrentPilot();
+            if (!item || !me || (item.authorId !== me.id && !isCurrentUserAdmin(me))) return showToast('Non hai i permessi per modificare questo annuncio.', 'error');
             item.status = item.status === 'Venduto' ? 'Disponibile' : 'Venduto';
             saveState();
             renderMarketplace();
@@ -3662,6 +3862,9 @@
         }
 
         function deleteListing(itemId) {
+            const item = listings.find(l => l.id === itemId);
+            const me = getCurrentPilot();
+            if (!item || !me || (item.authorId !== me.id && !isCurrentUserAdmin(me))) return showToast('Non hai i permessi per eliminare questo annuncio.', 'error');
             showCustomConfirm("Elimina Annuncio", "Vuoi rimuovere definitivamente questo annuncio dal mercatino?", () => {
                 listings = listings.filter(l => l.id !== itemId);
                 saveState();
@@ -3671,19 +3874,23 @@
             });
         }
 
-        function openListingModal() {
+        function openListingModal(editItemId = '') {
             const me = getCurrentPilot();
-            tempListingPhotos = [];
-            document.getElementById('listing-edit-id').value = '';
-            document.getElementById('listing-title').value = '';
-            document.getElementById('listing-price').value = '';
-            document.getElementById('listing-negotiable').checked = false;
-            document.getElementById('listing-photo-url').value = '';
-            document.getElementById('listing-description').value = '';
+            const existing = editItemId ? listings.find(x => String(x.id) === String(editItemId)) : null;
+            if (existing && (!me || (existing.authorId !== me.id && !isCurrentUserAdmin(me)))) return showToast('Non hai i permessi per modificare questo annuncio.', 'error');
+            tempListingPhotos = existing ? [...(existing.photos || (existing.photo ? [existing.photo] : []))] : [];
+            document.getElementById('listing-edit-id').value = existing ? existing.id : '';
+            document.getElementById('listing-title').value = existing?.title || '';
+            document.getElementById('listing-category').value = existing?.category || 'Ricambi';
+            document.getElementById('listing-condition').value = existing?.condition || 'Usato';
+            document.getElementById('listing-price').value = existing?.price ?? '';
+            document.getElementById('listing-negotiable').checked = !!existing?.negotiable;
+            document.getElementById('listing-photo-url').value = existing?.photo || '';
+            document.getElementById('listing-description').value = existing?.description || '';
             document.getElementById('listing-photos-preview-row').innerHTML = '';
-            if (me) {
-                document.getElementById('listing-author-preview').textContent = `${me.name} (${me.phone})`;
-            }
+            const title = document.getElementById('listing-modal-title');
+            if (title) title.innerHTML = existing ? '<i class="fa-solid fa-pen-to-square text-quad-500"></i> Modifica Annuncio' : '<i class="fa-solid fa-tag text-quad-500"></i> Pubblica Nuovo Annuncio';
+            if (me) document.getElementById('listing-author-preview').textContent = `${existing ? (pilots.find(p => p.id === existing.authorId)?.name || me.name) : me.name} (${existing ? (pilots.find(p => p.id === existing.authorId)?.phone || me.phone) : me.phone})`;
             const modal = document.getElementById('listing-modal');
             if (modal) {
                 modal.classList.remove('hidden');
@@ -3738,22 +3945,14 @@
                 finalPhotos.push(QUAD_GALLERY[0]);
             }
 
-            const newItem = {
-                id: 'item_' + Date.now(),
-                authorId: me.id,
-                title,
-                category,
-                condition,
-                price,
-                negotiable,
-                status: 'Disponibile',
-                photo: finalPhotos[0],
-                photos: finalPhotos.slice(0, 5),
-                description,
-                createdAt: 'Adesso'
-            };
-
-            listings.unshift(newItem);
+            const editId = document.getElementById('listing-edit-id')?.value || '';
+            if (editId) {
+                const existing = listings.find(x => String(x.id) === String(editId));
+                if (!existing || (existing.authorId !== me.id && !isCurrentUserAdmin(me))) return showToast('Non hai i permessi per modificare questo annuncio.', 'error');
+                Object.assign(existing, { title, category, condition, price, negotiable, photo: finalPhotos[0], photos: finalPhotos.slice(0, 5), description });
+            } else {
+                listings.unshift({ id: 'item_' + Date.now(), authorId: me.id, title, category, condition, price, negotiable, status: 'Disponibile', photo: finalPhotos[0], photos: finalPhotos.slice(0, 5), description, createdAt: 'Adesso' });
+            }
             saveState();
             closeListingModal();
             renderMarketplace();
@@ -3988,7 +4187,7 @@
 
             try {
                 isSavingRide = true;
-                const me = getCurrentPilot() || pilots[0];
+                const me = getCurrentPilot();
                 if (!me) {
                     showToast("Nessun pilota attivo trovato.", "error");
                     return;
@@ -4025,7 +4224,7 @@
 
                 if (editId) {
                     const idx = rides.findIndex(r => r.id === editId);
-                    if (idx !== -1) {
+                    if (idx !== -1 && (rides[idx].authorId === me.id || isCurrentUserAdmin(me))) {
                         rides[idx] = {
                             ...rides[idx],
                             title,
@@ -4095,6 +4294,9 @@
         }
 
         function deleteRide(rideId) {
+            const ride = rides.find(r => r.id === rideId);
+            const me = getCurrentPilot();
+            if (!ride || !me || (ride.authorId !== me.id && !isCurrentUserAdmin(me))) return showToast('Non hai i permessi per eliminare questa uscita.', 'error');
             showCustomConfirm("Elimina Uscita", "Vuoi eliminare questo giro dal calendario della squadra?", () => {
                 rides = rides.filter(r => r.id !== rideId);
                 saveState();
@@ -4614,11 +4816,14 @@
                 if (homeMapInstance) homeMapInstance.invalidateSize(true);
             });
 
-            const activePilot = getCurrentPilot() || pilots[0];
+            const activePilot = getCurrentPilot();
             if (activePilot) {
-                currentSessionPilotId = activePilot.id;
-                safeStorage.setSession('gq_active_pilot_id', activePilot.id);
                 enterAppSession(activePilot, false);
+            } else {
+                currentSessionPilotId = null;
+                safeStorage.removeSession('gq_active_pilot_id');
+                document.getElementById('app-shell')?.classList.add('hidden');
+                document.getElementById('login-screen')?.classList.remove('hidden');
             }
         });
     </script>
