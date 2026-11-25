@@ -4023,6 +4023,7 @@
         }
 
         function openNewRideForm(editRideId = '') {
+            if (editRideId && !isCurrentUserAdmin()) return showToast('La modifica delle uscite è riservata all’amministratore.', 'error');
             const panel = document.getElementById('new-ride-panel');
             const dtList = document.getElementById('ride-datetimes-list');
             const editIdInput = document.getElementById('ride-edit-id');
@@ -4208,6 +4209,10 @@
                 const difficulty = difficultyEl?.value || 'Media - Bosco & Fango';
                 const notes = (notesEl?.value || '').trim();
                 const editId = (editIdEl?.value || '').trim();
+                if (editId && !isCurrentUserAdmin(me)) {
+                    showToast('La modifica delle uscite è riservata all’amministratore.', 'error');
+                    return;
+                }
 
                 if (!title) {
                     showToast("Inserisci il titolo del giro o raduno.", "error");
@@ -4228,7 +4233,7 @@
 
                 if (editId) {
                     const idx = rides.findIndex(r => r.id === editId);
-                    if (idx !== -1 && (rides[idx].authorId === me.id || isCurrentUserAdmin(me))) {
+                    if (idx !== -1 && isCurrentUserAdmin(me)) {
                         rides[idx] = {
                             ...rides[idx],
                             title,
@@ -4299,8 +4304,7 @@
 
         function deleteRide(rideId) {
             const ride = rides.find(r => r.id === rideId);
-            const me = getCurrentPilot();
-            if (!ride || !me || (ride.authorId !== me.id && !isCurrentUserAdmin(me))) return showToast('Non hai i permessi per eliminare questa uscita.', 'error');
+            if (!ride || !isCurrentUserAdmin()) return showToast('La cancellazione delle uscite è riservata all’amministratore.', 'error');
             showCustomConfirm("Elimina Uscita", "Vuoi eliminare questo giro dal calendario della squadra?", () => {
                 rides = rides.filter(r => r.id !== rideId);
                 saveState();
@@ -4325,10 +4329,40 @@
             } catch (e) {}
         }
 
+        function getRideFinalDate(ride) {
+            const slots = Array.isArray(ride?.dateSlots) ? ride.dateSlots : [];
+            const values = slots.map(slot => `${slot.date || ''}T${slot.time || '23:59'}`).filter(v => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v));
+            if (!values.length && ride?.dateTimeIso) values.push(ride.dateTimeIso.length === 10 ? `${ride.dateTimeIso}T23:59` : ride.dateTimeIso);
+            const dates = values.map(v => new Date(v)).filter(d => !isNaN(d.getTime()));
+            return dates.length ? new Date(Math.max(...dates.map(d => d.getTime()))) : null;
+        }
+
+        function isRideExpired(ride, now = new Date()) {
+            const finalDate = getRideFinalDate(ride);
+            return !!finalDate && finalDate.getTime() < now.getTime();
+        }
+
+        function cleanupExpiredRides(now = new Date()) {
+            if (!Array.isArray(rides) || !rides.length) return false;
+            const before = rides.length;
+            rides = rides.filter(ride => {
+                const finalDate = getRideFinalDate(ride);
+                if (!finalDate) return true;
+                return now.getTime() < finalDate.getTime() + 7 * 24 * 60 * 60 * 1000;
+            });
+            if (rides.length !== before) {
+                safeStorage.set('gq_rides_v5', JSON.stringify(rides));
+                saveState();
+                return true;
+            }
+            return false;
+        }
+
         function renderRides() {
             const container = document.getElementById('rides-list-container');
             if (!container) return;
             const me = getCurrentPilot();
+            cleanupExpiredRides();
 
             if (!Array.isArray(rides) || rides.length === 0) {
                 container.innerHTML = `<div class="col-span-full bg-mud-900 border border-stone-800 rounded-3xl p-8 text-center text-xs text-stone-400">Nessuna uscita in programma al momento. Clicca su "Proponi Uscita" per creare la prima!</div>`;
@@ -4339,7 +4373,8 @@
                 const organizer = pilots.find(p => p.id === ride.authorId) || pilots[0];
                 const participants = Array.isArray(ride.participants) ? ride.participants : [];
                 const isJoined = me && participants.includes(me.id);
-                const canManage = me && (ride.authorId === me.id || isCurrentUserAdmin(me));
+                const canManage = me && isCurrentUserAdmin(me);
+                const expired = isRideExpired(ride);
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.meeting || '')}`;
 
                 const participantNames = participants.map(pid => {
@@ -4380,6 +4415,13 @@
                                     ` : ''}
                                 </div>
                             </div>
+
+                            ${expired ? `
+                                <div class="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] text-red-200">
+                                    <strong class="block text-xs uppercase tracking-wide"><i class="fa-solid fa-calendar-xmark mr-1.5"></i>Uscita già scaduta</strong>
+                                    Questa uscita resterà visibile per una settimana dalla data dell’ultima tappa, poi verrà eliminata automaticamente.
+                                </div>
+                            ` : ''}
 
                             ${slotBadges}
 
@@ -4442,11 +4484,14 @@
                                    class="px-3 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold flex items-center gap-1.5 transition">
                                     <i class="fa-solid fa-map-pin text-quad-400"></i> Ritrovo
                                 </a>
-                                <button type="button" onclick="toggleRideParticipation('${escapeHtml(ride.id)}')"
-                                        class="px-4 py-2 rounded-xl ${isJoined ? 'bg-forest-600 hover:bg-forest-500 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
-                                    <i class="fa-solid ${isJoined ? 'fa-check' : 'fa-helmet-safety'}"></i>
-                                    <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
-                                </button>
+                                ${expired ? `<span class="px-4 py-2 rounded-xl bg-stone-800 text-stone-500 text-xs font-bold"><i class="fa-solid fa-flag-checkered mr-1"></i>Uscita conclusa</span>` : `
+                                    <button type="button" onclick="toggleRideParticipation('${escapeHtml(ride.id)}')"
+                                            class="px-4 py-2 rounded-xl ${isJoined ? 'bg-forest-600 hover:bg-forest-500 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                        <i class="fa-solid ${isJoined ? 'fa-check' : 'fa-helmet-safety'}"></i>
+                                        <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
+                                    </button>
+                                `} 
+
                             </div>
                         </div>
                     </div>
