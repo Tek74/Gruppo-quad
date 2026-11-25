@@ -56,7 +56,8 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         const ONESIGNAL_APP_ID = "9688c438-a78a-4b8e-81ac-ce9d656d72a7";
-        const ONESIGNAL_REST_API_KEY = "os_v2_app_s2emiofhrjfy5anmz2owk3lsu6m7zyxpbt2ecxvx7aulv4skuhvpfvvbp5yg6dlrk25pkmiqujk7q47hvxkjg3vb7henrss6nyhktmy";
+        // Endpoint sicuro lato server: configurare dopo il deploy del Worker (vedi worker-notifiche.js).
+        const PUSH_BACKEND_URL = "INSERISCI_URL_WORKER_NOTIFICHE";
         window.oneSignalReady = false;
         window.oneSignalSubscriptionId = null;
 
@@ -1642,48 +1643,30 @@
             });
         }
 
-        async function sendNewRidePushNotification(authorName, rideTitle, rideDate, rideMeeting) {
-            triggerPushBannerPreview(
-                "🏍️ Nuovo Giro GRUPPOQUAD!",
-                `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`,
-                6500
-            );
-
-            if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID.includes("INSERISCI_QUI") ||
-                !ONESIGNAL_REST_API_KEY || ONESIGNAL_REST_API_KEY.includes("INSERISCI_QUI")) {
-                return;
+        async function sendGroupPushNotification(title, body) {
+            // Banner locale solo come feedback a chi ha effettuato l'azione.
+            triggerPushBannerPreview(title, body, 6500);
+            if (!PUSH_BACKEND_URL || PUSH_BACKEND_URL.includes("INSERISCI_URL")) {
+                console.warn("Push non inviata: configura PUSH_BACKEND_URL con l'URL del Worker sicuro.");
+                return false;
             }
             try {
-                const payload = {
-                    app_id: ONESIGNAL_APP_ID,
-                    included_segments: ["Subscribed Users", "Total Subscriptions"],
-                    headings: {
-                        it: "🏍️ Nuovo Giro GRUPPOQUAD!",
-                        en: "🏍️ Nuovo Giro GRUPPOQUAD!"
-                    },
-                    contents: {
-                        it: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`,
-                        en: `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`
-                    },
-                    chrome_web_icon: "https://commons.wikimedia.org/wiki/Special:FilePath/Yamaha_Raptor.JPG?width=256",
-                    priority: 10
-                };
-
-                if (!isSandboxOrIframe() && window.location.href.startsWith('http')) {
-                    payload.url = window.location.href.split('#')[0];
-                }
-
-                await fetch("https://api.onesignal.com/notifications?c=push", {
+                const response = await fetch(PUSH_BACKEND_URL, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Key " + ONESIGNAL_REST_API_KEY
-                    },
-                    body: JSON.stringify(payload)
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, body, url: window.location.href.split('#')[0] })
                 });
+                if (!response.ok) throw new Error("http_" + response.status);
+                return true;
             } catch (err) {
-                console.warn("Errore invio notifica push OneSignal:", err);
+                console.warn("Errore invio push di gruppo:", err);
+                return false;
             }
+        }
+
+        async function sendNewRidePushNotification(authorName, rideTitle, rideDate, rideMeeting) {
+            const body = `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`;
+            await sendGroupPushNotification("🏍️ Nuovo Giro GRUPPOQUAD!", body);
         }
 
         // ==================== SANITIZZAZIONE & SICUREZZA ====================
@@ -4280,7 +4263,10 @@
                         <div class="max-w-[82%] rounded-2xl px-4 py-2.5 ${isMine ? 'bg-quad-600 text-white rounded-br-sm' : 'bg-mud-950 border border-stone-800 text-stone-200 rounded-bl-sm'}">
                             <div class="flex items-center justify-between gap-4 mb-1">
                                 <span class="text-[10px] font-black ${isMine ? 'text-quad-100' : 'text-quad-400'}">${escapeHtml(msg.senderName)}</span>
-                                <span class="text-[9px] opacity-75">${escapeHtml(msg.time)}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] opacity-75">${escapeHtml(msg.time)}</span>
+                                    ${isCurrentUserAdmin() ? `<button type="button" onclick="deleteRadioMessage('${escapeHtml(String(msg.id))}')" class="text-[10px] text-red-300 hover:text-white" title="Elimina messaggio" aria-label="Elimina messaggio"><i class="fa-solid fa-trash"></i></button>` : ''}
+                                </div>
                             </div>
                             <p class="text-xs leading-relaxed">${escapeHtml(msg.text)}</p>
                         </div>
@@ -4288,6 +4274,20 @@
                 `;
             }).join('');
             box.scrollTop = box.scrollHeight;
+        }
+
+        function deleteRadioMessage(messageId) {
+            if (!isCurrentUserAdmin()) {
+                showToast("Solo l'amministratore può eliminare i messaggi.", "error");
+                return;
+            }
+            if (!confirm("Vuoi eliminare definitivamente questo messaggio dalla Radio Squadra?")) return;
+            const before = messages.length;
+            messages = messages.filter(msg => String(msg.id) !== String(messageId));
+            if (messages.length === before) return;
+            saveState();
+            renderChatMessages();
+            showToast("Messaggio eliminato dalla Radio Squadra.");
         }
 
         function handleSendChat(e) {
@@ -4311,6 +4311,7 @@
             input.value = '';
             saveState();
             renderChatMessages();
+            sendGroupPushNotification(`📻 Radio GRUPPOQUAD — ${me.name}`, text);
         }
 
         // ==================== VISTA 5: PROFILO, GARAGE MULTI-MEZZO & GPS CASA ====================
