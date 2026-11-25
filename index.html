@@ -86,14 +86,10 @@
                         await OneSignalInstance.login(me.email);
                     }
                     if (OneSignalInstance.User.addTags) {
-                        const prefs = typeof getPushPreferences === 'function' ? getPushPreferences() : { rides: true, radio: true, mutedAll: false };
                         OneSignalInstance.User.addTags({
                             pilot_id: me.id || '',
                             pilot_name: me.name || '',
-                            pilot_city: me.city || '',
-                            push_rides: prefs.mutedAll ? '0' : (prefs.rides ? '1' : '0',
-                            push_radio: prefs.mutedAll ? '0' : (prefs.radio ? '1' : '0',
-                            push_muted: prefs.mutedAll ? '1' : '0'
+                            pilot_city: me.city || ''
                         });
                     }
                 }
@@ -666,10 +662,10 @@
                 </nav>
 
                 <div class="flex items-center gap-2 shrink-0">
-                    <!-- Pulsante Preferenze Notifiche Push (Giri & Radio Squadra) -->
-                    <button type="button" id="push-bell-btn" onclick="openPushPrefsModal()"
+                    <!-- Pulsante Notifiche Push Uscite (Abilitato di Default) -->
+                    <button type="button" id="push-bell-btn" onclick="requestPushNotificationsPermission()"
                             class="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-400 flex items-center gap-1.5 transition cursor-pointer"
-                            title="Scegli gli avvisi push per Radio e Nuovi Giri o escludi le notifiche">
+                            title="Gestisci notifiche push su questo telefono/dispositivo">
                         <i id="push-bell-icon" class="fa-solid fa-bell"></i>
                         <span id="push-bell-label" class="hidden sm:inline">Avvisi Attivi</span>
                     </button>
@@ -1022,18 +1018,6 @@
                                     <option value="Hard - Roccia & Guadi">Hard</option>
                                 </select>
                                 <button type="submit" id="ride-submit-btn" class="px-4 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold cursor-pointer">Salva</button>
-                            </div>
-                        </div>
-
-                        <!-- Selezione Capogiro (Visibile solo all'Amministratore) -->
-                        <div id="ride-organizer-admin-wrapper" class="hidden sm:col-span-2 lg:col-span-4 bg-mud-800/70 border border-amber-500/35 rounded-xl p-3">
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                <label for="ride-organizer-select" class="text-[11px] font-bold text-amber-400 flex items-center gap-1.5">
-                                    <i class="fa-solid fa-crown"></i> Capogiro Uscita (Assegnazione Amministratore):
-                                </label>
-                                <select id="ride-organizer-select"
-                                        class="sm:w-72 bg-mud-950 border border-stone-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none">
-                                </select>
                             </div>
                         </div>
 
@@ -1479,86 +1463,6 @@
         </div>
     </div>
 
-    <!-- ==================== MODALE PREFERENZE AVVISI & NOTIFICHE PUSH ==================== -->
-    <div id="push-prefs-modal" data-modal="true" style="z-index: 9988;" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-md w-full p-6 shadow-2xl my-auto space-y-4">
-            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-bell text-emerald-400"></i> Gestione Avvisi & Notifiche Push
-                </h3>
-                <button type="button" onclick="closePushPrefsModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 text-xs text-stone-300 space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-stone-400 font-semibold">Stato Push Dispositivo:</span>
-                    <span id="push-modal-device-badge" class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-bold">Attive</span>
-                </div>
-                <p id="push-modal-device-hint" class="text-[11px] text-stone-400 leading-relaxed">
-                    Scegli quali avvisi ricevere o escludi completamente le notifiche push su questo dispositivo.
-                </p>
-                <button type="button" id="push-modal-register-btn" onclick="requestPushNotificationsPermission(true)"
-                        class="w-full py-2 px-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
-                    <i class="fa-solid fa-mobile-screen-button"></i>
-                    <span>Registra / Riattiva Push su questo Dispositivo</span>
-                </button>
-            </div>
-
-            <div class="space-y-2.5">
-                <label class="flex items-center justify-between gap-3 bg-mud-950 border border-stone-800 hover:border-quad-500/40 rounded-2xl p-3.5 cursor-pointer select-none">
-                    <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-quad-500/15 text-quad-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <i class="fa-solid fa-route"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-white">Nuovi Giri & Raduni Off-Road</p>
-                            <p class="text-[11px] text-stone-400">Avvisami quando viene proposta o aggiornata un'uscita.</p>
-                        </div>
-                    </div>
-                    <input type="checkbox" id="pref-push-rides" onchange="handlePushPrefToggle()"
-                           class="w-5 h-5 accent-emerald-500 rounded cursor-pointer shrink-0">
-                </label>
-
-                <label class="flex items-center justify-between gap-3 bg-mud-950 border border-stone-800 hover:border-sky-500/40 rounded-2xl p-3.5 cursor-pointer select-none">
-                    <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <i class="fa-solid fa-walkie-talkie"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-white">Messaggi Radio Squadra</p>
-                            <p class="text-[11px] text-stone-400">Avvisami quando un pilota scrive nella Radio Squadra.</p>
-                        </div>
-                    </div>
-                    <input type="checkbox" id="pref-push-radio" onchange="handlePushPrefToggle()"
-                           class="w-5 h-5 accent-emerald-500 rounded cursor-pointer shrink-0">
-                </label>
-
-                <label class="flex items-center justify-between gap-3 bg-red-950/25 border border-red-500/30 hover:border-red-500/50 rounded-2xl p-3.5 cursor-pointer select-none">
-                    <div class="flex items-start gap-3">
-                        <div class="w-9 h-9 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center shrink-0 mt-0.5">
-                            <i class="fa-solid fa-bell-slash"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-red-300">Escludi tutti i messaggi push</p>
-                            <p class="text-[11px] text-stone-400">Disattiva ogni notifica push e banner su questo dispositivo.</p>
-                        </div>
-                    </div>
-                    <input type="checkbox" id="pref-push-mute-all" onchange="handlePushMuteAllToggle(this.checked)"
-                           class="w-5 h-5 accent-red-500 rounded cursor-pointer shrink-0">
-                </label>
-            </div>
-
-            <div class="pt-2 flex justify-end gap-2">
-                <button type="button" onclick="closePushPrefsModal()"
-                        class="px-5 py-2.5 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold shadow-lg shadow-quad-600/20 cursor-pointer">
-                    Conferma & Chiudi
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- ==================== MODALE MODIFICA LINK SOCIAL (AMMINISTRATORE) ==================== -->
     <div id="social-links-modal" data-modal="true" style="z-index: 9985;" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
         <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl my-auto space-y-4">
@@ -1630,185 +1534,11 @@
     </div>
 
     <script>
-        // ==================== STATO NOTIFICHE, PREFERENZE GRANULARI & CONTROLLO AMBIENTE ====================
+        // ==================== STATO NOTIFICHE & CONTROLLO AMBIENTE ====================
         window.gqNotificationsEnabled = true;
         let pushBannerHideTimer = null;
 
-        function getPushPreferences() {
-            try {
-                const raw = safeStorage.get('gq_push_prefs_v1');
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    return {
-                        rides: parsed.rides !== false,
-                        radio: parsed.radio !== false,
-                        mutedAll: Boolean(parsed.mutedAll)
-                    };
-                }
-            } catch (e) {}
-            return { rides: true, radio: true, mutedAll: false };
-        }
-
-        function savePushPreferences(prefs) {
-            const normalized = {
-                rides: Boolean(prefs.rides),
-                radio: Boolean(prefs.radio),
-                mutedAll: Boolean(prefs.mutedAll)
-            };
-            if (!normalized.rides && !normalized.radio) {
-                normalized.mutedAll = true;
-            }
-            safeStorage.set('gq_push_prefs_v1', JSON.stringify(normalized));
-
-            const me = typeof getCurrentPilot === 'function' ? getCurrentPilot() : null;
-            if (me) {
-                me.pushPrefs = normalized;
-                if (typeof saveState === 'function') saveState();
-            }
-
-            // Sincronizza preferenze e opt-in/opt-out su OneSignal
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
-            OneSignalDeferred.push(async function(OneSignal) {
-                try {
-                    if (OneSignal.User) {
-                        if (OneSignal.User.addTags) {
-                            OneSignal.User.addTags({
-                                push_rides: normalized.mutedAll ? '0' : (normalized.rides ? '1' : '0'),
-                                push_radio: normalized.mutedAll ? '0' : (normalized.radio ? '1' : '0'),
-                                push_muted: normalized.mutedAll ? '1' : '0'
-                            });
-                        }
-                        if (OneSignal.User.PushSubscription) {
-                            if (normalized.mutedAll) {
-                                await OneSignal.User.PushSubscription.optOut();
-                            } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                                await OneSignal.User.PushSubscription.optIn();
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.warn("Aggiornamento tag/subscription OneSignal:", err);
-                }
-            });
-
-            updatePushBellButtonUI(window.gqNotificationsEnabled);
-            return normalized;
-        }
-
-        function openPushPrefsModal() {
-            const prefs = getPushPreferences();
-            const ridesChk = document.getElementById('pref-push-rides');
-            const radioChk = document.getElementById('pref-push-radio');
-            const muteChk = document.getElementById('pref-push-mute-all');
-
-            if (ridesChk) ridesChk.checked = !prefs.mutedAll && prefs.rides;
-            if (radioChk) radioChk.checked = !prefs.mutedAll && prefs.radio;
-            if (muteChk) muteChk.checked = prefs.mutedAll;
-
-            updatePushModalStatusBadge();
-
-            const modal = document.getElementById('push-prefs-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-        }
-
-        function closePushPrefsModal() {
-            const modal = document.getElementById('push-prefs-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-
-        function updatePushModalStatusBadge() {
-            const badge = document.getElementById('push-modal-device-badge');
-            const hint = document.getElementById('push-modal-device-hint');
-            if (!badge || !hint) return;
-
-            const prefs = getPushPreferences();
-            const inSandbox = isSandboxOrIframe() || !('serviceWorker' in navigator);
-
-            if (prefs.mutedAll) {
-                badge.textContent = "Push Escluse";
-                badge.className = "px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 text-[11px] font-bold";
-                hint.textContent = "Hai scelto di escludere tutti i messaggi push su questo dispositivo.";
-                return;
-            }
-
-            if (inSandbox) {
-                badge.textContent = "Anteprima Sandbox";
-                badge.className = "px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold";
-                hint.textContent = "Preferenze salvate. Per le notifiche reali sul telefono apri l'app dal link diretto GitHub Pages.";
-                return;
-            }
-
-            const activeList = [];
-            if (prefs.rides) activeList.push("Nuovi Giri");
-            if (prefs.radio) activeList.push("Radio Squadra");
-
-            badge.textContent = window.gqNotificationsEnabled
-                ? `Attive (${activeList.join(' + ')})`
-                : "Da Attivare sul Telefono";
-            badge.className = window.gqNotificationsEnabled
-                ? "px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-bold"
-                : "px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold";
-            hint.textContent = window.gqNotificationsEnabled
-                ? "Il dispositivo riceverà solo le categorie selezionate qui sotto."
-                : "Premi il pulsante qui sotto per autorizzare le notifiche push sul dispositivo.";
-        }
-
-        function handlePushPrefToggle() {
-            const ridesVal = Boolean(document.getElementById('pref-push-rides')?.checked);
-            const radioVal = Boolean(document.getElementById('pref-push-radio')?.checked);
-            const muteChk = document.getElementById('pref-push-mute-all');
-
-            const mutedAll = (!ridesVal && !radioVal);
-            if (muteChk) muteChk.checked = mutedAll;
-
-            const saved = savePushPreferences({
-                rides: ridesVal,
-                radio: radioVal,
-                mutedAll
-            });
-            updatePushModalStatusBadge();
-
-            if (saved.mutedAll) {
-                showToast("Notifiche push escluse su questo dispositivo.");
-            } else {
-                const parts = [];
-                if (saved.rides) parts.push("Nuovi Giri");
-                if (saved.radio) parts.push("Radio Squadra");
-                showToast(`Avvisi attivi per: ${parts.join(' e ')}`);
-            }
-        }
-
-        function handlePushMuteAllToggle(isMuted) {
-            const ridesChk = document.getElementById('pref-push-rides');
-            const radioChk = document.getElementById('pref-push-radio');
-
-            if (isMuted) {
-                if (ridesChk) ridesChk.checked = false;
-                if (radioChk) radioChk.checked = false;
-                savePushPreferences({ rides: false, radio: false, mutedAll: true });
-                updatePushModalStatusBadge();
-                showToast("Sei stato escluso dai messaggi push.");
-            } else {
-                if (ridesChk) ridesChk.checked = true;
-                if (radioChk) radioChk.checked = true;
-                savePushPreferences({ rides: true, radio: true, mutedAll: false });
-                updatePushModalStatusBadge();
-                showToast("Avvisi riattivati per Nuovi Giri e Radio Squadra!");
-            }
-        }
-
-        function triggerPushBannerPreview(title, body, autoHideMs = 6500, category = 'all') {
-            const prefs = getPushPreferences();
-            if (prefs.mutedAll) return;
-            if (category === 'rides' && !prefs.rides) return;
-            if (category === 'radio' && !prefs.radio) return;
-
+        function triggerPushBannerPreview(title, body, autoHideMs = 6500) {
             const banner = document.getElementById('push-notification-banner');
             const titleEl = document.getElementById('push-banner-title');
             const bodyEl = document.getElementById('push-banner-body');
@@ -1840,57 +1570,33 @@
             const label = document.getElementById('push-bell-label');
             if (!btn || !icon || !label) return;
 
-            const prefs = getPushPreferences();
             const inSandbox = isSandboxOrIframe();
             const swSupported = ('serviceWorker' in navigator);
 
-            if (prefs.mutedAll) {
-                btn.className = "px-3 py-2 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/40 text-xs font-bold text-red-300 flex items-center gap-1.5 transition cursor-pointer";
-                icon.className = "fa-solid fa-bell-slash";
-                label.textContent = "Push Escluse";
-                return;
-            }
-
-            const activeSummary = (prefs.rides && prefs.radio)
-                ? "Avvisi: Giri + Radio"
-                : (prefs.rides ? "Avvisi: Solo Giri" : "Avvisi: Solo Radio");
-
             if (inSandbox || !swSupported) {
                 btn.className = "px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 flex items-center gap-1.5 transition cursor-pointer";
-                icon.className = "fa-solid fa-sliders";
-                label.textContent = activeSummary;
+                icon.className = "fa-solid fa-triangle-exclamation";
+                label.textContent = "Solo Sito Diretto";
                 return;
             }
 
             if (isOptedIn) {
                 btn.className = "px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-400 flex items-center gap-1.5 transition cursor-pointer";
                 icon.className = "fa-solid fa-bell";
-                label.textContent = activeSummary;
+                label.textContent = "Avvisi Attivi";
             } else {
                 btn.className = "px-3 py-2 rounded-xl bg-quad-500/15 hover:bg-quad-600 border border-quad-500/40 text-xs font-bold text-quad-400 hover:text-white flex items-center gap-1.5 transition cursor-pointer";
                 icon.className = "fa-regular fa-bell";
-                label.textContent = activeSummary;
+                label.textContent = "Attiva Push";
             }
         }
 
-        async function requestPushNotificationsPermission(fromModal = false) {
-            const prefs = getPushPreferences();
-            if (prefs.mutedAll) {
-                savePushPreferences({ rides: true, radio: true, mutedAll: false });
-                const ridesChk = document.getElementById('pref-push-rides');
-                const radioChk = document.getElementById('pref-push-radio');
-                const muteChk = document.getElementById('pref-push-mute-all');
-                if (ridesChk) ridesChk.checked = true;
-                if (radioChk) radioChk.checked = true;
-                if (muteChk) muteChk.checked = false;
-            }
-
+        async function requestPushNotificationsPermission() {
             if (isSandboxOrIframe() || !('serviceWorker' in navigator)) {
                 triggerPushBannerPreview(
                     "⚠️ Anteprima Sandbox: Push Disabilitate",
                     "Per ricevere notifiche push sul telefono apri l'URL diretto di GitHub Pages (su iPhone usa Condividi → Aggiungi a schermata Home).",
-                    8500,
-                    'all'
+                    8500
                 );
                 showToast("Apri l'app direttamente dal link GitHub Pages per registrare il telefono!", "error");
                 return;
@@ -1899,9 +1605,8 @@
             if (isIosBrowser() && !isStandalonePwa()) {
                 triggerPushBannerPreview(
                     "📱 iPhone / iPad: Aggiungi a Home",
-                    "Su iOS Safari tocca Condividi (quadrato con freccia) → 'Aggiungi alla schermata Home', poi apri l'app dall'icona e tocca 'Avvisi'.",
-                    9000,
-                    'all'
+                    "Su iOS Safari tocca Condividi (quadrato con freccia) → 'Aggiungi alla schermata Home', poi apri l'app dall'icona e tocca 'Attiva Push'.",
+                    9000
                 );
                 showToast("Su iPhone aggiungi prima l'app alla schermata Home per attivare le push.", "error");
                 return;
@@ -1911,8 +1616,7 @@
                 triggerPushBannerPreview(
                     "🔕 Permesso Bloccato nel Browser",
                     "Hai bloccato le notifiche per questo sito. Vai nelle Impostazioni del browser → Notifiche → Consenti per questo sito.",
-                    8500,
-                    'all'
+                    8500
                 );
                 showToast("Notifiche bloccate nelle impostazioni del browser.", "error");
                 return;
@@ -1934,16 +1638,13 @@
                     await syncOneSignalUserIdentity(OneSignal);
                     const optedIn = Boolean(OneSignal.User?.PushSubscription?.optedIn);
                     window.gqNotificationsEnabled = optedIn;
-                    savePushPreferences(getPushPreferences());
                     updatePushBellButtonUI(optedIn);
-                    if (fromModal) updatePushModalStatusBadge();
 
                     if (optedIn) {
                         triggerPushBannerPreview(
                             "🏍️ Telefono Registrato alle Notifiche!",
-                            "Dispositivo collegato a GRUPPOQUAD: riceverai gli avvisi selezionati anche ad app chiusa.",
-                            6000,
-                            'all'
+                            "Dispositivo collegato a GRUPPOQUAD: riceverai gli avvisi push anche ad app chiusa.",
+                            6000
                         );
                         showToast("Notifiche push attivate con successo su questo dispositivo!");
                     } else {
@@ -1956,8 +1657,9 @@
             });
         }
 
-        async function sendGroupPushNotification(title, body, category = 'all') {
-            triggerPushBannerPreview(title, body, 6500, category);
+        async function sendGroupPushNotification(title, body) {
+            // Banner locale solo come feedback a chi ha effettuato l'azione.
+            triggerPushBannerPreview(title, body, 6500);
             if (!PUSH_BACKEND_URL || PUSH_BACKEND_URL.includes("INSERISCI_URL")) {
                 console.warn("Push non inviata: configura PUSH_BACKEND_URL con l'URL del Worker sicuro.");
                 return false;
@@ -1966,12 +1668,7 @@
                 const response = await fetch(PUSH_BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        title,
-                        body,
-                        category,
-                        url: window.location.href.split('#')[0]
-                    })
+                    body: JSON.stringify({ title, body, url: window.location.href.split('#')[0] })
                 });
                 if (!response.ok) throw new Error("http_" + response.status);
                 return true;
@@ -1983,7 +1680,7 @@
 
         async function sendNewRidePushNotification(authorName, rideTitle, rideDate, rideMeeting) {
             const body = `${authorName} ha inserito "${rideTitle}" (${rideDate}) — Ritrovo: ${rideMeeting}`;
-            await sendGroupPushNotification("🏍️ Nuovo Giro GRUPPOQUAD!", body, 'rides');
+            await sendGroupPushNotification("🏍️ Nuovo Giro GRUPPOQUAD!", body);
         }
 
         // ==================== SANITIZZAZIONE & SICUREZZA ====================
@@ -2513,7 +2210,6 @@
                 const cancelBtn = document.getElementById('confirm-cancel-btn');
                 if (cancelBtn) cancelBtn.click();
             },
-            'push-prefs-modal': () => closePushPrefsModal(),
             'social-links-modal': () => closeSocialLinksModal(),
             'payment-modal': () => closePaymentModal(),
             'admin-edit-pin-modal': () => closeAdminEditPinModal(),
@@ -2527,7 +2223,6 @@
         const MODAL_Z_ORDER = [
             'confirm-modal',
             'payment-modal',
-            'push-prefs-modal',
             'social-links-modal',
             'admin-edit-pin-modal',
             'recover-pin-modal',
@@ -2802,7 +2497,6 @@
             pilots = data.pilots;
             listings = Array.isArray(data.listings) ? data.listings : mergeCollectionById(listings, []);
             rides = normalizedRemoteRides.length > 0 ? normalizedRemoteRides : mergeCollectionById(rides, []);
-            const purgedExpiredRides = purgeExpiredRidesFromState(false);
             messages = Array.isArray(data.messages) ? data.messages : mergeCollectionById(messages, []);
             if (data.socialLinks && typeof data.socialLinks === 'object') {
                 socialLinks = { ...DEFAULT_SOCIAL_LINKS, ...data.socialLinks };
@@ -2820,7 +2514,7 @@
                 safeStorage.set('gq_last_local_mutation_at', String(remoteUpdatedAt));
             }
 
-            if ((hadLegacyPhotos || purgedExpiredRides) && cloudDbBaseUrl) {
+            if (hadLegacyPhotos && cloudDbBaseUrl) {
                 scheduleCloudPush(250);
             }
 
@@ -4345,7 +4039,7 @@
             btn.closest('.ride-dt-row')?.remove();
         }
 
-        function openNewRideForm(editRideId = '', reopenWithNewDate = false) {
+        function openNewRideForm(editRideId = '') {
             const panel = document.getElementById('new-ride-panel');
             const dtList = document.getElementById('ride-datetimes-list');
             const editIdInput = document.getElementById('ride-edit-id');
@@ -4360,51 +4054,21 @@
             if (dtList) dtList.innerHTML = '';
 
             const existingRide = editRideId ? rides.find(r => r.id === editRideId) : null;
-            const me = getCurrentPilot();
-            const isAdmin = isCurrentUserAdmin(me);
-            const orgWrapper = document.getElementById('ride-organizer-admin-wrapper');
-            const orgSelect = document.getElementById('ride-organizer-select');
-            if (orgWrapper && orgSelect) {
-                if (isAdmin) {
-                    orgWrapper.classList.remove('hidden');
-                    const selectedOrgId = existingRide?.authorId || me?.id || (pilots[0]?.id || '');
-                    orgSelect.innerHTML = pilots.map(p => {
-                        ensurePilotIdentityFields(p);
-                        return `<option value="${escapeHtml(p.id)}" ${p.id === selectedOrgId ? 'selected' : ''}>${escapeHtml(p.name)} (${escapeHtml(p.quadModel || 'Quad')})</option>`;
-                    }).join('');
-                } else {
-                    orgWrapper.classList.add('hidden');
-                    orgSelect.innerHTML = '';
-                }
-            }
 
             if (existingRide) {
-                const isPast = getRideLifecycleInfo(existingRide).isPast;
-                const shouldSuggestNewDate = reopenWithNewDate || isPast;
                 if (editIdInput) editIdInput.value = existingRide.id;
-                if (formTitle) {
-                    formTitle.innerHTML = shouldSuggestNewDate
-                        ? `<i class="fa-solid fa-rotate-right text-amber-400"></i> Riapri Uscita & Imposta Nuova Data`
-                        : `<i class="fa-solid fa-pen-to-square text-quad-500"></i> Modifica Percorso / Uscita Quad`;
-                }
-                if (submitBtn) submitBtn.textContent = shouldSuggestNewDate ? 'Riapri & Salva' : 'Aggiorna';
+                if (formTitle) formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-quad-500"></i> Modifica Percorso / Uscita Quad`;
+                if (submitBtn) submitBtn.textContent = 'Aggiorna';
                 if (titleInput) titleInput.value = existingRide.title || '';
                 if (meetingInput) meetingInput.value = existingRide.meeting || '';
                 if (diffSelect) diffSelect.value = existingRide.difficulty || 'Media - Bosco & Fango';
                 if (notesInput) notesInput.value = existingRide.notes || '';
 
                 if (Array.isArray(existingRide.dateSlots) && existingRide.dateSlots.length > 0) {
-                    existingRide.dateSlots.forEach((slot, idx) => {
-                        const suggestedDate = (shouldSuggestNewDate && idx === 0) ? getNextSundayIsoDate() : slot.date;
-                        addRideDateTimeRow(suggestedDate, slot.time);
-                    });
+                    existingRide.dateSlots.forEach(slot => addRideDateTimeRow(slot.date, slot.time));
                 } else {
                     const isoParts = (existingRide.dateTimeIso || '').split('T');
-                    const suggestedDate = shouldSuggestNewDate ? getNextSundayIsoDate() : (isoParts[0] || getNextSundayIsoDate());
-                    addRideDateTimeRow(suggestedDate, isoParts[1] || '08:30');
-                }
-                if (shouldSuggestNewDate) {
-                    showToast("Imposta la nuova data/ora e premi 'Riapri & Salva' per riattivare l'uscita.");
+                    addRideDateTimeRow(isoParts[0] || getNextSundayIsoDate(), isoParts[1] || '08:30');
                 }
 
                 if (existingRide.programDataUrl) {
@@ -4561,10 +4225,6 @@
                 const difficulty = difficultyEl?.value || 'Media - Bosco & Fango';
                 const notes = (notesEl?.value || '').trim();
                 const editId = (editIdEl?.value || '').trim();
-                const orgSelectEl = document.getElementById('ride-organizer-select');
-                const selectedAuthorId = (isCurrentUserAdmin(me) && orgSelectEl && orgSelectEl.value)
-                    ? orgSelectEl.value
-                    : me.id;
 
                 if (!title) {
                     showToast("Inserisci il titolo del giro o raduno.", "error");
@@ -4588,7 +4248,6 @@
                     if (idx !== -1 && (rides[idx].authorId === me.id || isCurrentUserAdmin(me))) {
                         rides[idx] = {
                             ...rides[idx],
-                            authorId: isCurrentUserAdmin(me) ? selectedAuthorId : rides[idx].authorId,
                             title,
                             date: dateLabel,
                             dateTimeIso: firstIso,
@@ -4604,7 +4263,7 @@
                 } else {
                     const newRide = {
                         id: 'ride_' + Date.now(),
-                        authorId: selectedAuthorId,
+                        authorId: me.id,
                         title,
                         date: dateLabel,
                         dateTimeIso: firstIso,
@@ -4641,10 +4300,6 @@
             const me = getCurrentPilot();
             const ride = rides.find(r => r.id === rideId);
             if (!me || !ride) return;
-            if (getRideLifecycleInfo(ride).isPast) {
-                showToast("Questo evento è già concluso.", "error");
-                return;
-            }
             if (!Array.isArray(ride.participants)) ride.participants = [];
 
             const idx = ride.participants.indexOf(me.id);
@@ -4687,83 +4342,10 @@
             } catch (e) {}
         }
 
-        // ==================== GESTIONE EVENTI PASSATI & AUTO-PULIZIA (7 GIORNI) ====================
-        const RIDE_AUTO_DELETE_MS = 7 * 24 * 60 * 60 * 1000;
-
-        function getRideReferenceEndTimestamp(ride) {
-            if (!ride || typeof ride !== 'object') return null;
-
-            if (Array.isArray(ride.dateSlots) && ride.dateSlots.length > 0) {
-                const timestamps = ride.dateSlots
-                    .map(slot => {
-                        if (!slot || !slot.date) return NaN;
-                        const timePart = (slot.time || '23:59').trim();
-                        const parsed = new Date(`${slot.date}T${timePart}`);
-                        return parsed.getTime();
-                    })
-                    .filter(ts => !Number.isNaN(ts));
-
-                if (timestamps.length > 0) {
-                    return Math.max(...timestamps);
-                }
-            }
-
-            if (ride.dateTimeIso) {
-                const parsedIso = new Date(ride.dateTimeIso).getTime();
-                if (!Number.isNaN(parsedIso)) return parsedIso;
-            }
-
-            return null;
-        }
-
-        function getRideLifecycleInfo(ride, nowMs = Date.now()) {
-            const endTs = getRideReferenceEndTimestamp(ride);
-            if (!endTs) {
-                return { isPast: false, isExpiredForAutoDelete: false, endTs: null };
-            }
-            const isPast = endTs < nowMs;
-            const isExpiredForAutoDelete = isPast && (nowMs - endTs >= RIDE_AUTO_DELETE_MS);
-            return { isPast, isExpiredForAutoDelete, endTs };
-        }
-
-        function purgeExpiredRidesFromState(syncToCloud = true) {
-            if (!Array.isArray(rides)) return false;
-            const nowMs = Date.now();
-            const initialCount = rides.length;
-            rides = rides.filter(ride => !getRideLifecycleInfo(ride, nowMs).isExpiredForAutoDelete);
-
-            const removedAny = rides.length !== initialCount;
-            if (removedAny) {
-                safeStorage.set('gq_rides_v5', JSON.stringify(rides));
-                if (syncToCloud) {
-                    saveState();
-                }
-            }
-            return removedAny;
-        }
-
-        function changeRideOrganizer(rideId, newAuthorId) {
-            const me = getCurrentPilot();
-            if (!isCurrentUserAdmin(me)) {
-                showToast("Solo l'amministratore può cambiare il capogiro.", "error");
-                return;
-            }
-            const ride = rides.find(r => r.id === rideId);
-            const newOrganizer = pilots.find(p => p.id === newAuthorId);
-            if (!ride || !newOrganizer) return;
-
-            ride.authorId = newOrganizer.id;
-            saveState();
-            renderRides();
-            showToast(`Capogiro di "${ride.title}" aggiornato a ${newOrganizer.name}!`);
-        }
-
         function renderRides() {
             const container = document.getElementById('rides-list-container');
             if (!container) return;
             const me = getCurrentPilot();
-            const nowMs = Date.now();
-            purgeExpiredRidesFromState(true);
 
             if (!Array.isArray(rides) || rides.length === 0) {
                 container.innerHTML = `<div class="col-span-full bg-mud-900 border border-stone-800 rounded-3xl p-8 text-center text-xs text-stone-400">Nessuna uscita in programma al momento. Clicca su "Proponi Uscita" per creare la prima!</div>`;
@@ -4774,11 +4356,7 @@
                 const organizer = pilots.find(p => p.id === ride.authorId) || pilots[0];
                 const participants = Array.isArray(ride.participants) ? ride.participants : [];
                 const isJoined = me && participants.includes(me.id);
-                const isAdmin = isCurrentUserAdmin(me);
-                const lifecycle = getRideLifecycleInfo(ride, nowMs);
-                const isPastEvent = lifecycle.isPast;
-                const canEditRide = me && (ride.authorId === me.id || isAdmin);
-                const canDeleteRide = me && (ride.authorId === me.id || isAdmin);
+                const canManage = me && (ride.authorId === me.id || isCurrentUserAdmin(me));
                 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ride.meeting || '')}`;
 
                 const participantNames = participants.map(pid => {
@@ -4797,30 +4375,22 @@
                     : '';
 
                 return `
-                    <div class="bg-mud-900 border ${isPastEvent ? 'border-stone-800/80 opacity-85' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4 shadow-lg">
+                    <div class="bg-mud-900 border border-stone-800 rounded-3xl p-5 flex flex-col justify-between gap-4 shadow-lg">
                         <div class="space-y-3">
                             <div class="flex items-start justify-between gap-2">
-                                <span class="px-3 py-1 rounded-xl ${isPastEvent ? 'bg-stone-800/80 border border-stone-700 text-stone-300' : 'bg-quad-500/15 border border-quad-500/30 text-quad-400'} text-xs font-black">
+                                <span class="px-3 py-1 rounded-xl bg-quad-500/15 border border-quad-500/30 text-quad-400 text-xs font-black">
                                     <i class="fa-regular fa-calendar-check mr-1.5"></i>${escapeHtml(ride.date)}
                                 </span>
                                 <div class="flex items-center gap-1.5 shrink-0">
-                                    ${isPastEvent ? `
-                                        <span class="px-2.5 py-1 rounded-lg bg-stone-800 border border-stone-600 text-stone-200 text-[10px] font-black uppercase">
-                                            <i class="fa-solid fa-flag-checkered mr-1 text-amber-400"></i>Evento concluso
-                                        </span>
-                                    ` : `
-                                        <span class="px-2.5 py-1 rounded-lg bg-mud-950 border border-stone-800 text-[10px] font-bold text-stone-300">
-                                            ${escapeHtml(ride.difficulty)}
-                                        </span>
-                                    `}
-                                    ${canEditRide ? `
-                                        <button type="button" onclick="openNewRideForm('${escapeHtml(ride.id)}')" title="${isPastEvent ? 'Riapri e cambia data uscita' : 'Modifica uscita'}"
+                                    <span class="px-2.5 py-1 rounded-lg bg-mud-950 border border-stone-800 text-[10px] font-bold text-stone-300">
+                                        ${escapeHtml(ride.difficulty)}
+                                    </span>
+                                    ${canManage ? `
+                                        <button type="button" onclick="openNewRideForm('${escapeHtml(ride.id)}')" title="Modifica uscita"
                                                 class="w-7 h-7 rounded-lg bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-black flex items-center justify-center text-xs transition cursor-pointer">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
-                                    ` : ''}
-                                    ${canDeleteRide ? `
-                                        <button type="button" onclick="deleteRide('${escapeHtml(ride.id)}')" title="${isPastEvent ? 'Elimina evento concluso' : 'Elimina uscita'}"
+                                        <button type="button" onclick="deleteRide('${escapeHtml(ride.id)}')" title="Elimina uscita"
                                                 class="w-7 h-7 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white flex items-center justify-center text-xs transition cursor-pointer">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
@@ -4870,69 +4440,30 @@
 
                             <div class="pt-1">
                                 <p class="text-[11px] font-bold text-stone-400 mb-1.5">
-                                    ${isPastEvent ? `Partecipanti (${participants.length}):` : `Partecipanti Confermati (${participants.length}):`}
+                                    Partecipanti Confermati (${participants.length}):
                                 </p>
                                 <div class="flex flex-wrap gap-1.5">
                                     ${participantNames.length > 0
                                         ? participantNames.map(n => `<span class="px-2.5 py-1 rounded-lg bg-forest-600/20 border border-forest-500/30 text-emerald-300 text-[11px] font-bold">${escapeHtml(n)}</span>`).join('')
-                                        : '<span class="text-xs text-stone-500">Nessun iscritto</span>'}
+                                        : '<span class="text-xs text-stone-500">Nessun iscritto ancora</span>'}
                                 </div>
                             </div>
                         </div>
 
-                        <div class="pt-3 border-t border-stone-800 space-y-2.5">
-                            <div class="flex items-center justify-between gap-2 bg-mud-950/80 border border-stone-800/90 rounded-xl px-3 py-2">
-                                <div class="min-w-0 flex items-center gap-2 text-xs">
-                                    <i class="fa-solid fa-map-pin text-quad-400 shrink-0"></i>
-                                    <span class="text-stone-400 shrink-0">Ritrovo:</span>
-                                    <span class="text-stone-200 font-semibold truncate" title="${escapeHtml(ride.meeting)}">${escapeHtml(ride.meeting)}</span>
-                                </div>
+                        <div class="pt-3 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-[11px] text-stone-400">
+                                Capogiro: <strong class="text-stone-200">${escapeHtml(organizer?.name || 'Squadra')}</strong>
+                            </span>
+                            <div class="flex items-center gap-2">
                                 <a href="${escapeHtml(mapsUrl)}" target="_blank" rel="noopener noreferrer"
-                                   class="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold flex items-center gap-1.5 shrink-0 transition">
-                                    <i class="fa-solid fa-diamond-turn-right text-quad-400"></i> Ritrovo
+                                   class="px-3 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-map-pin text-quad-400"></i> Ritrovo
                                 </a>
-                            </div>
-
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                ${isAdmin ? `
-                                    <div class="flex items-center gap-1.5 text-[11px] text-stone-400">
-                                        <i class="fa-solid fa-crown text-amber-400"></i>
-                                        <span>Capogiro:</span>
-                                        <select onchange="changeRideOrganizer('${escapeHtml(ride.id)}', this.value)"
-                                                title="Cambia Capogiro Uscita (Admin)"
-                                                class="bg-mud-950 border border-amber-500/40 focus:border-amber-400 rounded-lg px-2 py-1 text-[11px] font-bold text-amber-300 focus:outline-none cursor-pointer">
-                                            ${pilots.map(p => {
-                                                ensurePilotIdentityFields(p);
-                                                return `<option value="${escapeHtml(p.id)}" ${p.id === ride.authorId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`;
-                                            }).join('')}
-                                        </select>
-                                    </div>
-                                ` : `
-                                    <span class="text-[11px] text-stone-400">
-                                        Capogiro: <strong class="text-stone-200">${escapeHtml(organizer?.name || 'Squadra')}</strong>
-                                    </span>
-                                `}
-                                <div class="flex items-center gap-2">
-                                    ${isPastEvent ? (canEditRide ? `
-                                        <button type="button" onclick="openNewRideForm('${escapeHtml(ride.id)}', true)"
-                                                class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-amber-600/20 transition cursor-pointer">
-                                            <i class="fa-solid fa-rotate-right"></i>
-                                            <span>Riapri & Cambia Data</span>
-                                        </button>
-                                    ` : `
-                                        <button type="button" disabled
-                                                class="px-4 py-2 rounded-xl bg-stone-800/80 border border-stone-700 text-stone-400 text-xs font-bold flex items-center gap-1.5 cursor-not-allowed">
-                                            <i class="fa-solid fa-clock-rotate-left"></i>
-                                            <span>Evento concluso</span>
-                                        </button>
-                                    `) : `
-                                        <button type="button" onclick="toggleRideParticipation('${escapeHtml(ride.id)}')"
-                                                class="px-4 py-2 rounded-xl ${isJoined ? 'bg-forest-600 hover:bg-forest-500 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
-                                            <i class="fa-solid ${isJoined ? 'fa-check' : 'fa-helmet-safety'}"></i>
-                                            <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
-                                        </button>
-                                    `}
-                                </div>
+                                <button type="button" onclick="toggleRideParticipation('${escapeHtml(ride.id)}')"
+                                        class="px-4 py-2 rounded-xl ${isJoined ? 'bg-forest-600 hover:bg-forest-500 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                    <i class="fa-solid ${isJoined ? 'fa-check' : 'fa-helmet-safety'}"></i>
+                                    <span>${isJoined ? 'Partecipo' : 'Partecipa'}</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -5003,7 +4534,7 @@
             input.value = '';
             saveState();
             renderChatMessages();
-            sendGroupPushNotification(`📻 Radio GRUPPOQUAD — ${me.name}`, text, 'radio');
+            sendGroupPushNotification(`📻 Radio GRUPPOQUAD — ${me.name}`, text);
         }
 
         // ==================== VISTA 5: PROFILO, GARAGE MULTI-MEZZO & GPS CASA ====================
@@ -5292,12 +4823,6 @@
         // ==================== INIZIALIZZAZIONE IMMEDIATA APP ====================
         window.addEventListener('DOMContentLoaded', () => {
             sanitizeAllPhotosToQuadOnly();
-            purgeExpiredRidesFromState(true);
-            setInterval(() => {
-                if (purgeExpiredRidesFromState(true)) {
-                    renderRides();
-                }
-            }, 60 * 60 * 1000);
             renderLoginPilots();
             renderSocialLinks();
             startCloudSyncLoop();
