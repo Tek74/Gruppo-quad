@@ -4258,7 +4258,7 @@
 
         function deleteVehicle(vehId) {
             const me = getCurrentPilot();
-            if (!me || me.vehicles.length <= 1) return;
+            if (!me || !Array.isArray(me.vehicles) || me.vehicles.length <= 1) return;
             me.vehicles = me.vehicles.filter(v => v.id !== vehId);
             ensurePilotVehicles(me);
             saveState();
@@ -4271,7 +4271,7 @@
             tempVehiclePhotoDataUrl = QUAD_GALLERY[0];
             document.getElementById('vehicle-edit-id').value = '';
             document.getElementById('vehicle-model').value = '';
-            document.getElementById('vehicle-cc').value = '450';
+            document.getElementById('vehicle-cc').value = '570';
             document.getElementById('vehicle-tire').value = '0.45 Bar';
             document.getElementById('vehicle-photo-url').value = '';
             document.getElementById('vehicle-photo-preview').src = tempVehiclePhotoDataUrl;
@@ -4294,8 +4294,9 @@
             const file = e.target.files?.[0];
             if (!file) return;
             try {
-                tempVehiclePhotoDataUrl = await compressImageFileToDataUrl(file, 700, 0.72);
-                document.getElementById('vehicle-photo-preview').src = tempVehiclePhotoDataUrl;
+                const compressed = await compressImageFileToDataUrl(file, 700, 0.72);
+                tempVehiclePhotoDataUrl = compressed;
+                document.getElementById('vehicle-photo-preview').src = compressed;
             } catch (err) {}
         }
 
@@ -4313,9 +4314,9 @@
             ensurePilotVehicles(me);
 
             const type = document.getElementById('vehicle-type').value;
-            const cc = parseInt(document.getElementById('vehicle-cc').value, 10) || 450;
             const model = document.getElementById('vehicle-model').value.trim();
-            const tirePressure = document.getElementById('vehicle-tire').value.trim();
+            const cc = parseInt(document.getElementById('vehicle-cc').value, 10) || 450;
+            const tirePressure = document.getElementById('vehicle-tire').value.trim() || '0.45 Bar';
             const drive = document.getElementById('vehicle-drive').value;
             const setActive = document.getElementById('vehicle-set-active').checked;
 
@@ -4330,13 +4331,15 @@
             };
 
             me.vehicles.push(newVeh);
-            if (setActive) me.activeVehicleId = newVeh.id;
+            if (setActive) {
+                me.activeVehicleId = newVeh.id;
+            }
             ensurePilotVehicles(me);
             saveState();
             closeVehicleModal();
             enterAppSession(me, false);
             populateGarageForm();
-            showToast(`Mezzo "${model}" aggiunto al garage!`);
+            showToast(`${model} aggiunto al tuo garage!`);
         }
 
         function initOrRefreshHomeMap() {
@@ -4361,16 +4364,16 @@
                 });
 
                 homeMapMarker = L.marker([me.lat, me.lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
-                homeMapMarker.on('dragend', () => {
-                    const pos = homeMapMarker.getLatLng();
-                    document.getElementById('garage-lat').value = pos.lat.toFixed(4);
-                    document.getElementById('garage-lng').value = pos.lng.toFixed(4);
+                homeMapMarker.on('dragend', function(ev) {
+                    const pos = ev.target.getLatLng();
+                    document.getElementById('garage-lat').value = pos.lat.toFixed(5);
+                    document.getElementById('garage-lng').value = pos.lng.toFixed(5);
                 });
 
-                homeMapInstance.on('click', (e) => {
-                    homeMapMarker.setLatLng(e.latlng);
-                    document.getElementById('garage-lat').value = e.latlng.lat.toFixed(4);
-                    document.getElementById('garage-lng').value = e.latlng.lng.toFixed(4);
+                homeMapInstance.on('click', function(ev) {
+                    homeMapMarker.setLatLng(ev.latlng);
+                    document.getElementById('garage-lat').value = ev.latlng.lat.toFixed(5);
+                    document.getElementById('garage-lng').value = ev.latlng.lng.toFixed(5);
                 });
             } else {
                 homeMapInstance.invalidateSize();
@@ -4384,16 +4387,15 @@
             document.getElementById('garage-lng').value = lng;
             document.getElementById('garage-city').value = cityLabel;
             syncHomeMapFromInputs();
-            showToast(`Località selezionata: ${cityLabel}`);
+            showToast(`Punto casa impostato su ${cityLabel}`);
         }
 
         function syncHomeMapFromInputs() {
             const lat = parseFloat(document.getElementById('garage-lat').value);
             const lng = parseFloat(document.getElementById('garage-lng').value);
-            if (!isNaN(lat) && !isNaN(lng) && homeMapInstance && homeMapMarker) {
-                homeMapMarker.setLatLng([lat, lng]);
-                homeMapInstance.setView([lat, lng], 12);
-            }
+            if (isNaN(lat) || isNaN(lng) || !homeMapInstance || !homeMapMarker) return;
+            homeMapMarker.setLatLng([lat, lng]);
+            homeMapInstance.setView([lat, lng], 12);
         }
 
         function detectDeviceGPSForHome() {
@@ -4403,14 +4405,16 @@
             }
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
-                    const lat = Number(pos.coords.latitude.toFixed(4));
-                    const lng = Number(pos.coords.longitude.toFixed(4));
+                    const lat = pos.coords.latitude.toFixed(5);
+                    const lng = pos.coords.longitude.toFixed(5);
                     document.getElementById('garage-lat').value = lat;
                     document.getElementById('garage-lng').value = lng;
                     syncHomeMapFromInputs();
-                    showToast("Posizione GPS rilevata!");
+                    showToast("Posizione GPS attuale rilevata!");
                 },
-                () => showToast("Impossibile rilevare il GPS. Clicca direttamente sulla mappa.", "error")
+                () => {
+                    showToast("Impossibile rilevare il GPS (controlla i permessi).", "error");
+                }
             );
         }
 
@@ -4419,23 +4423,36 @@
             const me = getCurrentPilot();
             if (!me) return;
 
-            me.firstName = document.getElementById('garage-first-name').value.trim();
-            me.lastName = document.getElementById('garage-last-name').value.trim();
-            me.name = `${me.firstName} ${me.lastName}`;
-            me.email = document.getElementById('garage-email').value.trim().toLowerCase();
-            me.phone = document.getElementById('garage-phone').value.trim();
-            me.city = document.getElementById('garage-city').value.trim();
-            me.pin = document.getElementById('garage-pin').value.trim();
-            me.lat = parseFloat(document.getElementById('garage-lat').value) || me.lat;
-            me.lng = parseFloat(document.getElementById('garage-lng').value) || me.lng;
+            const firstName = document.getElementById('garage-first-name').value.trim();
+            const lastName = document.getElementById('garage-last-name').value.trim();
+            const email = document.getElementById('garage-email').value.trim().toLowerCase();
+            const phone = document.getElementById('garage-phone').value.trim();
+            const city = document.getElementById('garage-city').value.trim();
+            const pin = document.getElementById('garage-pin').value.trim();
+            const lat = parseFloat(document.getElementById('garage-lat').value);
+            const lng = parseFloat(document.getElementById('garage-lng').value);
+
+            if (pilots.some(p => p.id !== me.id && (p.email || '').toLowerCase() === email)) {
+                showToast("Questa email è già utilizzata da un altro pilota.", "error");
+                return;
+            }
+
+            me.firstName = firstName;
+            me.lastName = lastName;
+            me.name = `${firstName} ${lastName}`;
+            me.email = email;
+            me.phone = phone;
+            me.city = city;
+            me.pin = pin;
+            if (!isNaN(lat)) me.lat = lat;
+            if (!isNaN(lng)) me.lng = lng;
 
             saveState();
             enterAppSession(me, false);
-            populateGarageForm();
-            showToast("Profilo e punto GPS casa salvati!");
+            showToast("Profilo e posizione GPS salvati e sincronizzati!");
         }
 
-        // ==================== AVVIO APPLICAZIONE ====================
+        // ==================== INIZIALIZZAZIONE IMMEDIATA APP ====================
         window.addEventListener('DOMContentLoaded', () => {
             sanitizeAllPhotosToQuadOnly();
             renderLoginPilots();
@@ -4448,15 +4465,6 @@
                 safeStorage.setSession('gq_active_pilot_id', activePilot.id);
                 enterAppSession(activePilot, false);
             }
-
-            // Mostra banner notifica push di benvenuto dopo il caricamento per confermare che gli avvisi sono abilitati
-            setTimeout(() => {
-                triggerPushBannerPreview(
-                    "🔔 Notifiche Push Abilitate",
-                    "Sei connesso al gruppo GRUPPOQUAD con gli avvisi attivi per nuovi giri, raduni e radio squadra.",
-                    5200
-                );
-            }, 900);
         });
     </script>
 </body>
