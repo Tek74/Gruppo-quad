@@ -1159,7 +1159,7 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-stone-400 mb-1">Paese / Località *</label>
-                                            <input type="text" id="garage-city" required placeholder="Es. Valeggio sul Mincio (VR)"
+                                            <input type="text" id="garage-city" required placeholder="Es. Valeggio sul Mincio (VR)" onchange="geocodeHomeCity(false)"
                                                    class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:border-forest-500 focus:outline-none">
                                         </div>
                                     </div>
@@ -1185,37 +1185,20 @@
                                         <h3 class="text-sm font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
                                             <i class="fa-solid fa-house-signal"></i> Punto GPS di Casa Tua
                                         </h3>
-                                        <button type="button" onclick="detectDeviceGPSForHome()" class="px-3 py-1.5 rounded-lg bg-forest-600 hover:bg-forest-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
-                                            <i class="fa-solid fa-location-crosshairs"></i> Rileva GPS attuale
+                                        <button type="button" onclick="geocodeHomeCity(true)" class="px-3 py-1.5 rounded-lg bg-forest-600 hover:bg-forest-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                            <i class="fa-solid fa-magnifying-glass-location"></i> Trova da località
                                         </button>
                                     </div>
                                     <p class="text-[11px] text-stone-400">
-                                        Clicca sulla mappa, trascina il pin verde oppure scegli una località rapida per calcolare i km dagli amici:
+                                        La posizione GPS viene ricavata automaticamente dal campo <strong class="text-stone-200">Paese / Località</strong>. Inserisci comune e provincia (es. Valeggio sul Mincio, VR): il pin mostrerà il centro della località.
                                     </p>
-
-                                    <div class="flex flex-wrap gap-1.5">
-                                        <button type="button" onclick="setQuickHomeCoords(45.3541, 10.7336, 'Valeggio sul Mincio (VR)')" class="px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 cursor-pointer">Valeggio s/M</button>
-                                        <button type="button" onclick="setQuickHomeCoords(45.4388, 10.6912, 'Peschiera del Garda (VR)')" class="px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 cursor-pointer">Peschiera d/G</button>
-                                        <button type="button" onclick="setQuickHomeCoords(45.3522, 10.8442, 'Villafranca di Verona (VR)')" class="px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 cursor-pointer">Villafranca VR</button>
-                                        <button type="button" onclick="setQuickHomeCoords(45.3189, 10.6594, 'Volta Mantovana (MN)')" class="px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 cursor-pointer">Volta Mantovana</button>
-                                    </div>
+                                    <p id="garage-geocode-status" class="text-[11px] text-emerald-400" aria-live="polite">La posizione verrà individuata dalla località indicata.</p>
                                     
                                     <div id="profile-home-map" style="height: 220px; min-height: 210px;" class="w-full rounded-2xl overflow-hidden border border-stone-700 z-10 bg-mud-950 relative">
                                         <div class="absolute inset-0 flex items-center justify-center text-xs text-stone-500 pointer-events-none">Caricamento mappa posizione casa...</div>
                                     </div>
 
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Latitudine Casa</label>
-                                            <input type="number" step="any" id="garage-lat" required onchange="syncHomeMapFromInputs()"
-                                                   class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-200 focus:border-forest-500 focus:outline-none">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Longitudine Casa</label>
-                                            <input type="number" step="any" id="garage-lng" required onchange="syncHomeMapFromInputs()"
-                                                   class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-200 focus:border-forest-500 focus:outline-none">
-                                        </div>
-                                    </div>
+
                                 </div>
                             </div>
 
@@ -4551,8 +4534,6 @@
             document.getElementById('garage-phone').value = me.phone || '';
             document.getElementById('garage-city').value = me.city || '';
             document.getElementById('garage-pin').value = me.pin || '';
-            document.getElementById('garage-lat').value = me.lat;
-            document.getElementById('garage-lng').value = me.lng;
             document.getElementById('garage-active-summary').textContent = `${me.quadModel} (${me.cc}cc) • Gomme ${me.tirePressure}`;
 
             renderPilotVehicles();
@@ -4729,18 +4710,7 @@
                     iconAnchor: [18, 18]
                 });
 
-                homeMapMarker = L.marker([me.lat, me.lng], { icon: homeIcon, draggable: true }).addTo(homeMapInstance);
-                homeMapMarker.on('dragend', function(ev) {
-                    const pos = ev.target.getLatLng();
-                    document.getElementById('garage-lat').value = pos.lat.toFixed(5);
-                    document.getElementById('garage-lng').value = pos.lng.toFixed(5);
-                });
-
-                homeMapInstance.on('click', function(ev) {
-                    homeMapMarker.setLatLng(ev.latlng);
-                    document.getElementById('garage-lat').value = ev.latlng.lat.toFixed(5);
-                    document.getElementById('garage-lng').value = ev.latlng.lng.toFixed(5);
-                });
+                homeMapMarker = L.marker([me.lat, me.lng], { icon: homeIcon, draggable: false }).addTo(homeMapInstance);
             } else {
                 homeMapInstance.setView([me.lat, me.lng], 12);
                 if (homeMapMarker) homeMapMarker.setLatLng([me.lat, me.lng]);
@@ -4750,43 +4720,47 @@
             setTimeout(() => { if (homeMapInstance) homeMapInstance.invalidateSize(true); }, 400);
         }
 
-        function setQuickHomeCoords(lat, lng, cityLabel) {
-            document.getElementById('garage-lat').value = lat;
-            document.getElementById('garage-lng').value = lng;
-            document.getElementById('garage-city').value = cityLabel;
-            syncHomeMapFromInputs();
-            showToast(`Punto casa impostato su ${cityLabel}`);
+        async function geocodeHomeCity(showFeedback = false) {
+            const cityInput = document.getElementById('garage-city');
+            const status = document.getElementById('garage-geocode-status');
+            const city = cityInput?.value.trim();
+            if (!city) {
+                if (showFeedback) showToast("Inserisci prima Paese / Località.", "error");
+                return null;
+            }
+            if (status) status.textContent = "Ricerca della località in corso...";
+            try {
+                const query = `${city}, Italia`;
+                const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=${encodeURIComponent(query)}`;
+                const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('Servizio di ricerca non disponibile');
+                const results = await response.json();
+                if (!results.length) throw new Error('Località non trovata');
+                const lat = Number(results[0].lat);
+                const lng = Number(results[0].lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Coordinate non valide');
+                const me = getCurrentPilot();
+                if (me) { me.lat = lat; me.lng = lng; }
+                if (homeMapInstance && homeMapMarker) {
+                    homeMapMarker.setLatLng([lat, lng]);
+                    homeMapInstance.setView([lat, lng], 13);
+                }
+                if (status) status.textContent = `Posizione individuata: ${results[0].display_name}`;
+                if (showFeedback) showToast(`Punto GPS ricavato da: ${city}`);
+                return { lat, lng };
+            } catch (error) {
+                if (status) status.textContent = error.message || "Impossibile individuare la località.";
+                if (showFeedback) showToast(error.message || "Località non trovata.", "error");
+                return null;
+            }
         }
 
         function syncHomeMapFromInputs() {
-            const lat = parseFloat(document.getElementById('garage-lat').value);
-            const lng = parseFloat(document.getElementById('garage-lng').value);
-            if (isNaN(lat) || isNaN(lng) || !homeMapInstance || !homeMapMarker) return;
-            homeMapMarker.setLatLng([lat, lng]);
-            homeMapInstance.setView([lat, lng], 12);
+            // Le coordinate non vengono inserite manualmente: sono ricavate dal campo Paese / Località.
+            return geocodeHomeCity(false);
         }
 
-        function detectDeviceGPSForHome() {
-            if (!navigator.geolocation) {
-                showToast("Geolocalizzazione non supportata dal browser.", "error");
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude.toFixed(5);
-                    const lng = pos.coords.longitude.toFixed(5);
-                    document.getElementById('garage-lat').value = lat;
-                    document.getElementById('garage-lng').value = lng;
-                    syncHomeMapFromInputs();
-                    showToast("Posizione GPS attuale rilevata!");
-                },
-                () => {
-                    showToast("Impossibile rilevare il GPS (controlla i permessi).", "error");
-                }
-            );
-        }
-
-        function handleSaveGarage(e) {
+        async function handleSaveGarage(e) {
             e.preventDefault();
             const me = getCurrentPilot();
             if (!me) return;
@@ -4797,8 +4771,11 @@
             const phone = document.getElementById('garage-phone').value.trim();
             const city = document.getElementById('garage-city').value.trim();
             const pin = document.getElementById('garage-pin').value.trim();
-            const lat = parseFloat(document.getElementById('garage-lat').value);
-            const lng = parseFloat(document.getElementById('garage-lng').value);
+            if (!city) { showToast("Inserisci Paese / Località.", "error"); return; }
+            const homeCoords = await geocodeHomeCity(false);
+            if (!homeCoords) { showToast("Non riesco a ricavare il GPS dalla località. Controlla il nome inserito.", "error"); return; }
+            const lat = homeCoords.lat;
+            const lng = homeCoords.lng;
 
             if (pilots.some(p => p.id !== me.id && (p.email || '').toLowerCase() === email)) {
                 showToast("Questa email è già utilizzata da un altro pilota.", "error");
@@ -4812,8 +4789,8 @@
             me.phone = phone;
             me.city = city;
             me.pin = pin;
-            if (!isNaN(lat)) me.lat = lat;
-            if (!isNaN(lng)) me.lng = lng;
+            me.lat = lat;
+            me.lng = lng;
 
             saveState();
             enterAppSession(me, false);
