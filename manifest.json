@@ -1,7 +1,8 @@
 {
-  "name": "Gruppo Quad",
-  "short_name": "GruppoQuad",
-  "description": "Gestione uscite, mappa membri e mercatino Gruppo Quad",
+  "id": "./",
+  "name": "GRUPPOQUAD - Squadra ATV & Off-Road",
+  "short_name": "GRUPPOQUAD",
+  "description": "Gestione uscite, mappa membri e mercatino GRUPPOQUAD",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,16 +11,22 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

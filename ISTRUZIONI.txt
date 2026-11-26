@@ -1,0 +1,22 @@
+GRUPPOQUAD – correzione installazione Android (GitHub Pages)
+
+1. Apri il repository GitHub che pubblica https://tek74.github.io/Gruppo-quad/
+2. Sostituisci il file index.html con quello contenuto in questa cartella.
+3. Carica nella stessa cartella principale del repository anche:
+   - manifest.json
+   - icon-192.png
+   - icon-512.png
+   - OneSignalSDKWorker.js
+4. Esegui Commit changes e attendi la pubblicazione di GitHub Pages.
+5. Sul telefono Android apri con Chrome:
+   https://tek74.github.io/Gruppo-quad/
+6. Ricarica la pagina. Dal menu ⋮ di Chrome scegli "Installa app" oppure
+   "Aggiungi a schermata Home" (la dicitura dipende dalla versione di Chrome).
+
+IMPORTANTE:
+- Tutti e cinque i file devono stare nella root pubblicata del progetto,
+  non dentro una sottocartella.
+- Non rinominare OneSignalSDKWorker.js: è il worker richiesto dalla configurazione
+  notifiche già presente nell'index.
+- Dopo il commit, se Chrome mostra ancora la vecchia versione, cancella i dati
+  del sito/cache di quel dominio e riapri il link.
