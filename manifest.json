@@ -1,18 +1,24 @@
 {
-  "name": "GRUPPOQUAD - Squadra ATV & Off-Road",
-  "short_name": "GRUPPOQUAD",
-  "description": "App ufficiale della squadra GRUPPOQUAD: mappa amici, mercatino ricambi, uscite off-road e radio squadra.",
-  "start_url": "./index.html",
+  "name": "Gruppo Quad",
+  "short_name": "GruppoQuad",
+  "description": "Gestione uscite, mappa membri e mercatino Gruppo Quad",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0c0a09",
   "theme_color": "#0c0a09",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "https://commons.wikimedia.org/wiki/Special:FilePath/Yamaha_Raptor.JPG?width=512",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
