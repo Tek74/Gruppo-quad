@@ -3366,7 +3366,7 @@
             [...select.options].find(o => o.value === String(vehicleId))?.remove();
             if (wasActive) select.value = select.options[0]?.value || '';
         }
-        function saveAdminPilotEditor(pilotId) {
+        async function saveAdminPilotEditor(pilotId) {
             if (!isCurrentUserAdmin()) return;
             const target = pilots.find(x => String(x.id) === String(pilotId));
             const editor = document.getElementById(getAdminEditorId(pilotId));
@@ -3390,8 +3390,10 @@
             if (!target.firstName || !target.lastName) return showToast('Nome e cognome sono obbligatori.', 'error');
             target.name = `${target.firstName} ${target.lastName}`.trim();
             target.email = email;
+            const newCity = read('city').trim();
+            const adminCityChanged = newCity && newCity !== (target.city || '');
             target.phone = read('phone').trim();
-            target.city = read('city').trim();
+            target.city = newCity;
             target.role = read('role').trim();
             target.pin = read('pin').trim();
             target.status = read('status').trim();
@@ -3400,6 +3402,15 @@
             target.activeVehicleId = vehicles.some(v => String(v.id) === String(requestedActive)) ? requestedActive : vehicles[0].id;
             ensurePilotIdentityFields(target);
             if (oldEmail !== target.email && isPilotAdmin(target)) target.email = ADMIN_EMAIL;
+            if (adminCityChanged) {
+                try {
+                    const geo = await geocodeCityQuery(target.city);
+                    if (geo) {
+                        target.lat = geo.lat;
+                        target.lng = geo.lng;
+                    }
+                } catch (err) {}
+            }
             saveState();
             renderAdminManagementPanel();
             renderDashboardData(); renderMarketplace(); renderRides(); renderChatMessages(); renderLoginPilots();
@@ -3547,7 +3558,7 @@
             }
         }
 
-        function handleCreatePilot(e) {
+        async function handleCreatePilot(e) {
             e.preventDefault();
             const firstName = document.getElementById('new-pilot-first-name').value.trim();
             const lastName = document.getElementById('new-pilot-last-name').value.trim();
@@ -3561,6 +3572,28 @@
             if (pilots.some(p => (p.email || '').toLowerCase() === email)) {
                 showToast("Questa email è già registrata nella squadra.", "error");
                 return;
+            }
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const prevBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Localizzazione...';
+            }
+
+            let pilotLat = 45.3541 + (Math.random() - 0.5) * 0.02;
+            let pilotLng = 10.7336 + (Math.random() - 0.5) * 0.02;
+            try {
+                const geo = await geocodeCityQuery(city);
+                if (geo) {
+                    pilotLat = geo.lat;
+                    pilotLng = geo.lng;
+                }
+            } catch (err) {}
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = prevBtnHtml;
             }
 
             const newId = 'pilot_' + Date.now();
@@ -3594,8 +3627,8 @@
                     drive: "4x4 Inseribile + Blocco Diff.",
                     photo
                 }],
-                lat: 45.3541 + (Math.random() - 0.5) * 0.04,
-                lng: 10.7336 + (Math.random() - 0.5) * 0.04
+                lat: pilotLat,
+                lng: pilotLng
             };
 
             pilots.push(newPilot);
@@ -4999,11 +5032,10 @@
             el.className = tone === 'error' ? 'text-[11px] text-amber-300' : tone === 'success' ? 'text-[11px] text-emerald-400' : 'text-[11px] text-stone-400';
         }
 
-        async function geocodeCityQuery(city) {
-            const cleanCity = (city || '').trim();
-            if (!cleanCity) return null;
-            const normalizedQuery = cleanCity.replace(/\(([A-Za-z]{2})\)/g, ', $1');
-            const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=${encodeURIComponent(normalizedQuery)}`;
+        async function fetchNominatimFirstMatch(queryText) {
+            const q = (queryText || '').trim();
+            if (!q) return null;
+            const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=it&q=${encodeURIComponent(q)}`;
             const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
             if (!res.ok) throw new Error('Geocoding non disponibile');
             const items = await res.json();
@@ -5011,7 +5043,32 @@
             const lat = parseFloat(items[0].lat);
             const lng = parseFloat(items[0].lon);
             if (isNaN(lat) || isNaN(lng)) return null;
-            return { lat, lng, label: items[0].display_name || cleanCity };
+            return { lat, lng, label: items[0].display_name || q };
+        }
+
+        async function geocodeCityQuery(city) {
+            const cleanCity = (city || '').trim();
+            if (!cleanCity) return null;
+
+            // Normalizza parentesi con sigla o provincia estesa, es: "Conegliano (Treviso)" -> "Conegliano, Treviso"
+            const normalizedQuery = cleanCity
+                .replace(/\(([^)]+)\)/g, ', $1')
+                .replace(/\s+,/g, ',')
+                .replace(/,\s*,/g, ',')
+                .trim();
+
+            const candidates = [normalizedQuery];
+            // Fallback senza parentesi (es. solo nome comune/indirizzo) se la prima query non trova risultati
+            const withoutParens = cleanCity.replace(/\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+            if (withoutParens && !candidates.includes(withoutParens)) {
+                candidates.push(withoutParens);
+            }
+
+            for (const candidate of candidates) {
+                const match = await fetchNominatimFirstMatch(candidate);
+                if (match) return match;
+            }
+            return null;
         }
 
         async function geocodeHomeCity(notifyUser = false) {
