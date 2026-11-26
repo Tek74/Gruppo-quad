@@ -2580,6 +2580,10 @@
             }
             if (Array.isArray(data.proposedVideos)) {
                 proposedVideos = data.proposedVideos.filter(v => v && v.id);
+            } else if (data.proposedVideos && typeof data.proposedVideos === 'object') {
+                proposedVideos = Object.values(data.proposedVideos).filter(v => v && v.id);
+            } else {
+                proposedVideos = [];
             }
 
             const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
@@ -2955,6 +2959,7 @@
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
             safeStorage.set('gq_social_links_v5', JSON.stringify(socialLinks));
+            safeStorage.set('gq_proposed_videos_v5', JSON.stringify(proposedVideos));
             pushStateToCloud();
         }
 
