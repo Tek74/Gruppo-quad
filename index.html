@@ -787,11 +787,18 @@
                                 Video delle uscite, foto nel fango, raduni e aggiornamenti ufficiali di <strong class="text-stone-200">GRUPPOQUAD</strong>.
                             </p>
                         </div>
-                        <button type="button" id="admin-edit-social-btn" onclick="openSocialLinksModal()"
-                                class="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                            <span>Modifica Link Social</span>
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                            <button type="button" onclick="openProposeVideoModal()"
+                                    class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-quad-600 hover:from-red-500 hover:to-quad-500 text-white text-xs font-black flex items-center gap-1.5 shadow-lg shadow-red-600/25 transition cursor-pointer">
+                                <span>🎥 Proponi il tuo video</span>
+                                <span id="proposed-videos-count-badge" class="hidden px-1.5 py-0.5 rounded-full bg-black/40 text-white text-[10px] font-black">0</span>
+                            </button>
+                            <button type="button" id="admin-edit-social-btn" onclick="openSocialLinksModal()"
+                                    class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                <span>Modifica Link Social</span>
+                            </button>
+                        </div>
                     </div>
                     <div id="dashboard-social-links-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5"></div>
                 </div>
@@ -1443,6 +1450,67 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODALE PROPONI IL TUO VIDEO ==================== -->
+    <div id="propose-video-modal" data-modal="true" style="z-index: 9985;" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-xl w-full p-6 shadow-2xl my-auto space-y-5">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>🎥</span> Proponi il tuo video per GRUPPOQUAD
+                </h3>
+                <button type="button" onclick="closeProposeVideoModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-stone-300 leading-relaxed">
+                Hai girato una clip off-road, un passaggio nel fango o un onboard con il tuo quad? Invia il link del tuo video (YouTube, Drive, TikTok, Instagram o Facebook) per condividerlo con la squadra o pubblicarlo sul canale ufficiale!
+            </p>
+
+            <form onsubmit="handleProposeVideoSubmit(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Titolo del Video *</label>
+                    <input type="text" id="propose-video-title" required maxlength="100" placeholder="Es. Guado nel fango sul Mincio - Polaris Scrambler 400"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Link del Video (YouTube, Google Drive, Instagram, TikTok...) *</label>
+                    <input type="url" id="propose-video-url" required placeholder="https://youtu.be/... oppure https://drive.google.com/..."
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Note / Descrizione (facoltativo)</label>
+                    <textarea id="propose-video-notes" rows="2" maxlength="300" placeholder="Dove è stato girato, con quale mezzo o eventuali note per il montaggio..."
+                              class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <a id="propose-video-wa-link" href="#" target="_blank" rel="noopener noreferrer"
+                       class="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 transition">
+                        <i class="fa-brands fa-whatsapp"></i> Invia anche via WhatsApp
+                    </a>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeProposeVideoModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-semibold cursor-pointer">Chiudi</button>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-quad-600 hover:from-red-500 hover:to-quad-500 text-white text-xs font-black shadow-lg shadow-red-600/25 cursor-pointer">
+                            <i class="fa-solid fa-paper-plane mr-1.5"></i> Invia Proposta Video
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="pt-3 border-t border-stone-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-stone-400">
+                        <i class="fa-solid fa-film text-quad-400 mr-1.5"></i>Video Proposti dalla Squadra
+                    </h4>
+                    <span id="proposed-videos-modal-total" class="text-[11px] font-bold text-stone-400">0 video</span>
+                </div>
+                <div id="proposed-videos-list" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+            </div>
         </div>
     </div>
 
@@ -2181,6 +2249,7 @@
         let rides = loadParsedData('gq_rides_v5', DEFAULT_RIDES);
         let messages = loadParsedData('gq_messages_v5', DEFAULT_MESSAGES);
         let socialLinks = loadParsedObject('gq_social_links_v5', DEFAULT_SOCIAL_LINKS);
+        let proposedVideos = loadParsedData('gq_proposed_videos_v5', []).filter(v => v && v.id);
 
         let currentSessionPilotId = safeStorage.getSession('gq_active_pilot_id') || null;
 
@@ -2203,6 +2272,7 @@
                 const cancelBtn = document.getElementById('confirm-cancel-btn');
                 if (cancelBtn) cancelBtn.click();
             },
+            'propose-video-modal': () => closeProposeVideoModal(),
             'social-links-modal': () => closeSocialLinksModal(),
             'payment-modal': () => closePaymentModal(),
             'admin-edit-pin-modal': () => closeAdminEditPinModal(),
@@ -2216,6 +2286,7 @@
         const MODAL_Z_ORDER = [
             'confirm-modal',
             'payment-modal',
+            'propose-video-modal',
             'social-links-modal',
             'admin-edit-pin-modal',
             'recover-pin-modal',
@@ -2481,7 +2552,8 @@
                 listings: data.listings || [],
                 rides: normalizedRemoteRides,
                 messages: data.messages || [],
-                socialLinks: data.socialLinks || DEFAULT_SOCIAL_LINKS
+                socialLinks: data.socialLinks || DEFAULT_SOCIAL_LINKS,
+                proposedVideos: Array.isArray(data.proposedVideos) ? data.proposedVideos : []
             });
 
             if (incomingHash === lastConfirmedCloudHash) return true;
@@ -2494,6 +2566,9 @@
             if (data.socialLinks && typeof data.socialLinks === 'object') {
                 socialLinks = { ...DEFAULT_SOCIAL_LINKS, ...data.socialLinks };
             }
+            if (Array.isArray(data.proposedVideos)) {
+                proposedVideos = data.proposedVideos.filter(v => v && v.id);
+            }
 
             const hadLegacyPhotos = sanitizeAllPhotosToQuadOnly();
 
@@ -2502,6 +2577,7 @@
             safeStorage.set('gq_rides_v5', JSON.stringify(rides));
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
             safeStorage.set('gq_social_links_v5', JSON.stringify(socialLinks));
+            safeStorage.set('gq_proposed_videos_v5', JSON.stringify(proposedVideos));
             if (remoteUpdatedAt > 0) {
                 lastLocalMutationAt = remoteUpdatedAt;
                 safeStorage.set('gq_last_local_mutation_at', String(remoteUpdatedAt));
@@ -2528,6 +2604,7 @@
                 rides,
                 messages,
                 socialLinks,
+                proposedVideos,
                 updatedAt: nowTs
             };
             const res = await fetch(endpoint, {
@@ -2544,7 +2621,7 @@
             }
             lastLocalMutationAt = nowTs;
             safeStorage.set('gq_last_local_mutation_at', String(nowTs));
-            lastConfirmedCloudHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks });
+            lastConfirmedCloudHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks, proposedVideos });
             return true;
         }
 
@@ -2598,13 +2675,14 @@
             if (!cloudDbBaseUrl || isCloudPushing) return;
             isCloudPushing = true;
             const nowTs = Date.now();
-            const snapshotHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks });
+            const snapshotHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks, proposedVideos });
             const payload = JSON.parse(JSON.stringify({
                 pilots,
                 listings,
                 rides,
                 messages,
                 socialLinks,
+                proposedVideos,
                 updatedAt: nowTs
             }));
 
@@ -2887,6 +2965,7 @@
 
         // ==================== GESTIONE SOCIAL LINKS ====================
         function renderSocialLinks() {
+            updateProposedVideosBadge();
             const dashGrid = document.getElementById('dashboard-social-links-grid');
             const loginRow = document.getElementById('login-social-links-row');
             const adminBtn = document.getElementById('admin-edit-social-btn');
@@ -2976,6 +3055,151 @@
             renderSocialLinks();
             closeSocialLinksModal();
             showToast("Link social aggiornati e sincronizzati con il gruppo!");
+        }
+
+        // ==================== PROPONI IL TUO VIDEO ====================
+        function updateProposedVideosBadge() {
+            const badge = document.getElementById('proposed-videos-count-badge');
+            const totalEl = document.getElementById('proposed-videos-modal-total');
+            const count = Array.isArray(proposedVideos) ? proposedVideos.length : 0;
+            if (badge) {
+                badge.textContent = String(count);
+                badge.classList.toggle('hidden', count === 0);
+            }
+            if (totalEl) {
+                totalEl.textContent = count === 1 ? '1 video' : `${count} video`;
+            }
+        }
+
+        function updateProposeVideoWhatsAppHref() {
+            const waBtn = document.getElementById('propose-video-wa-link');
+            if (!waBtn) return;
+            const me = getCurrentPilot();
+            const title = (document.getElementById('propose-video-title')?.value || '').trim();
+            const url = (document.getElementById('propose-video-url')?.value || '').trim();
+            const adminPilot = pilots.find(p => isPilotAdmin(p));
+            const targetPhone = adminPilot?.phone || '+393471122334';
+            const msg = `Ciao! Sono ${me?.name || 'un pilota'} di GRUPPOQUAD 🎥 Ti propongo questo video${title ? ' "' + title + '"' : ''}${url ? ': ' + url : ''}`;
+            waBtn.href = buildWhatsAppUrl(targetPhone, msg);
+        }
+
+        function renderProposedVideosList() {
+            updateProposedVideosBadge();
+            const listEl = document.getElementById('proposed-videos-list');
+            if (!listEl) return;
+            const me = getCurrentPilot();
+            const isAdmin = isCurrentUserAdmin(me);
+
+            if (!Array.isArray(proposedVideos) || proposedVideos.length === 0) {
+                listEl.innerHTML = `<p class="text-xs text-stone-500 text-center py-4">Nessun video proposto ancora. Sii il primo a condividere il tuo video!</p>`;
+                return;
+            }
+
+            listEl.innerHTML = proposedVideos.map(v => {
+                const canDelete = isAdmin || (me && v.authorId === me.id);
+                const safeHref = isSafeMediaUrl(v.url) ? escapeHtml(v.url) : '#';
+                return `
+                    <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3 flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1 space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-xs font-bold text-white truncate">${escapeHtml(v.title)}</span>
+                                <span class="px-2 py-0.5 rounded bg-quad-500/15 text-quad-400 text-[10px] font-bold">${escapeHtml(v.authorName || 'Pilota')}</span>
+                            </div>
+                            ${v.notes ? `<p class="text-[11px] text-stone-400 line-clamp-2">${escapeHtml(v.notes)}</p>` : ''}
+                            <div class="flex items-center gap-3 pt-0.5">
+                                <a href="${safeHref}" target="_blank" rel="noopener noreferrer"
+                                   class="inline-flex items-center gap-1 text-[11px] font-bold text-red-400 hover:text-red-300 transition">
+                                    <i class="fa-solid fa-play"></i> Guarda Video
+                                </a>
+                                <span class="text-[10px] text-stone-500">${escapeHtml(v.createdAt || '')}</span>
+                            </div>
+                        </div>
+                        ${canDelete ? `
+                            <button type="button" onclick="deleteProposedVideo('${escapeHtml(v.id)}')" title="Elimina proposta"
+                                    class="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-600 text-red-400 hover:text-white text-xs transition cursor-pointer shrink-0">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openProposeVideoModal() {
+            const modal = document.getElementById('propose-video-modal');
+            renderProposedVideosList();
+            updateProposeVideoWhatsAppHref();
+            const titleInp = document.getElementById('propose-video-title');
+            const urlInp = document.getElementById('propose-video-url');
+            if (titleInp && !titleInp.dataset.boundWa) {
+                titleInp.addEventListener('input', updateProposeVideoWhatsAppHref);
+                titleInp.dataset.boundWa = '1';
+            }
+            if (urlInp && !urlInp.dataset.boundWa) {
+                urlInp.addEventListener('input', updateProposeVideoWhatsAppHref);
+                urlInp.dataset.boundWa = '1';
+            }
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeProposeVideoModal() {
+            const modal = document.getElementById('propose-video-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function handleProposeVideoSubmit(e) {
+            e.preventDefault();
+            const me = getCurrentPilot();
+            if (!me) return;
+            const title = (document.getElementById('propose-video-title')?.value || '').trim();
+            const url = (document.getElementById('propose-video-url')?.value || '').trim();
+            const notes = (document.getElementById('propose-video-notes')?.value || '').trim();
+
+            if (!title || !isSafeMediaUrl(url)) {
+                showToast("Inserisci un titolo e un link URL valido (https://...).", "error");
+                return;
+            }
+
+            const newVideo = {
+                id: 'vid_' + Date.now(),
+                title,
+                url,
+                notes,
+                authorId: me.id,
+                authorName: me.name,
+                createdAt: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
+            };
+
+            proposedVideos.unshift(newVideo);
+            saveState();
+
+            document.getElementById('propose-video-title').value = '';
+            document.getElementById('propose-video-url').value = '';
+            document.getElementById('propose-video-notes').value = '';
+            updateProposeVideoWhatsAppHref();
+            renderProposedVideosList();
+            showToast("🎥 Video proposto e condiviso con la squadra!");
+        }
+
+        function deleteProposedVideo(videoId) {
+            const target = proposedVideos.find(v => v.id === videoId);
+            const me = getCurrentPilot();
+            if (!target || !me || (!isCurrentUserAdmin(me) && target.authorId !== me.id)) {
+                showToast("Non hai i permessi per eliminare questo video.", "error");
+                return;
+            }
+            showCustomConfirm("Elimina Proposta Video", `Vuoi rimuovere "${target.title}" dalla lista?`, () => {
+                proposedVideos = proposedVideos.filter(v => v.id !== videoId);
+                saveState();
+                renderProposedVideosList();
+                showToast("Proposta video rimossa.");
+            });
         }
 
         // ==================== AMMINISTRAZIONE COMPLETA ====================
