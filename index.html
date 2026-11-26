@@ -56,7 +56,7 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         const ONESIGNAL_APP_ID = "9688c438-a78a-4b8e-81ac-ce9d656d72a7";
-        const PUSH_BACKEND_URL = "INSERISCI_URL_WORKER_NOTIFICHE";
+        const PUSH_BACKEND_URL = "https://gruppoquad-notifiche.tecchionicola.workers.dev";
         window.oneSignalReady = false;
         window.oneSignalSubscriptionId = null;
 
@@ -1711,6 +1711,7 @@
         async function sendGroupPushNotification(title, body) {
             triggerPushBannerPreview(title, body, 6500);
             if (!PUSH_BACKEND_URL || PUSH_BACKEND_URL.includes("INSERISCI_URL")) {
+                console.warn("PUSH_BACKEND_URL non configurato.");
                 return false;
             }
             try {
@@ -1719,10 +1720,21 @@
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ title, body, url: window.location.href.split('#')[0] })
                 });
-                if (!response.ok) throw new Error("http_" + response.status);
+                const result = await response.json().catch(() => ({}));
+                console.log("Risposta Worker Push:", response.status, result);
+
+                if (!response.ok) {
+                    const detail = Array.isArray(result.details) ? result.details.join(", ") : (result.details || result.error || "Errore HTTP " + response.status);
+                    showToast("Errore invio push: " + detail, "error");
+                    return false;
+                }
+
+                const count = result.recipients ?? 0;
+                showToast(`Notifica push inviata a ${count} dispositivi!`);
                 return true;
             } catch (err) {
-                console.warn("Errore invio push di gruppo:", err);
+                console.error("Errore comunicazione Worker:", err);
+                showToast("Impossibile contattare il Worker Cloudflare.", "error");
                 return false;
             }
         }
