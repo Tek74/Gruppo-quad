@@ -112,14 +112,20 @@
         OneSignalDeferred.push(async function(OneSignal) {
             if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID.includes("INSERISCI_QUI")) return;
             try {
+                const isGhSubpath = window.location.pathname.toLowerCase().startsWith('/gruppo-quad');
+                const repoPrefix = isGhSubpath ? window.location.pathname.split('/')[1] : '';
+                const basePath = repoPrefix ? `/${repoPrefix}/` : '/';
+                const swPath = repoPrefix ? `${repoPrefix}/OneSignalSDKWorker.js` : 'OneSignalSDKWorker.js';
                 await OneSignal.init({
                     appId: ONESIGNAL_APP_ID,
+                    safari_web_id: "web.onesignal.auto.639febc2-a356-4a97-8e69-81281557724a",
                     allowLocalhostAsSecureOrigin: true,
-                    serviceWorkerParam: { scope: './' },
-                    serviceWorkerPath: 'OneSignalSDKWorker.js',
+                    serviceWorkerParam: { scope: basePath },
+                    serviceWorkerPath: swPath,
                     notifyButton: { enable: false }
                 });
                 window.oneSignalReady = true;
+                window.gqNotificationsEnabled = Boolean(OneSignal.User?.PushSubscription?.optedIn);
                 await syncOneSignalUserIdentity(OneSignal);
 
                 if (OneSignal.User && OneSignal.User.PushSubscription) {
@@ -1586,7 +1592,7 @@
 
     <script>
         // ==================== STATO NOTIFICHE & CONTROLLO AMBIENTE ====================
-        window.gqNotificationsEnabled = true;
+        window.gqNotificationsEnabled = false;
         let pushBannerHideTimer = null;
 
         function triggerPushBannerPreview(title, body, autoHideMs = 6500) {
@@ -3238,7 +3244,7 @@
                 const editorId = `admin-editor-${String(p.id).replace(/[^a-zA-Z0-9_-]/g, '')}`;
                 const vehiclesHtml = (Array.isArray(p.vehicles) ? p.vehicles : []).map((v, i) => `
                     <div class="admin-vehicle-card bg-mud-950/80 border border-stone-700 rounded-xl p-3" data-admin-vehicle-id="${escapeHtml(String(v.id || `veh_${p.id}_${i+1}`))}">
-                        <div class="flex items-center justify-between gap-2 mb-3"><span class="text-xs font-extrabold text-quad-300">MEZZO ${i + 1}</span><button type="button" onclick="adminRemoveVehicle('${escapeHtml(String(p.id))}', ${i})" class="text-[10px] font-bold text-red-300 hover:text-red-200 px-2 py-1 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash mr-1"></i>Rimuovi</button></div>
+                        <div class="flex items-center justify-between gap-2 mb-3"><span class="text-xs font-extrabold text-quad-300">MEZZO ${i + 1}</span><button type="button" onclick="adminRemoveVehicle('${escapeHtml(String(p.id))}', '${escapeHtml(String(v.id || `veh_${p.id}_${i+1}`))}')" class="text-[10px] font-bold text-red-300 hover:text-red-200 px-2 py-1 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash mr-1"></i>Rimuovi</button></div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             ${adminField('Tipologia', 'type', v.type || 'Quad / ATV')}
                             ${adminField('Modello', 'model', v.model || '')}
