@@ -13,30 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="GRUPPOQUAD">
     <link id="pwa-apple-icon" rel="apple-touch-icon" href="./icon-192.png">
     <title>GRUPPOQUAD - Squadra ATV & Off-Road</title>
-    <!-- ==================== MODALE ANTEPRIMA IMMAGINE A SCHERMO INTERO ==================== -->
-    <div id="ride-image-lightbox" data-modal="true" style="z-index: 10050;" onclick="closeRideImageLightbox()"
-         class="fixed inset-0 hidden items-center justify-center bg-black/95 backdrop-blur-md p-3 sm:p-6 cursor-zoom-out">
-        <div class="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center gap-3" onclick="event.stopPropagation()">
-            <div class="w-full flex items-center justify-between gap-2 px-1">
-                <span id="ride-lightbox-title" class="text-xs sm:text-sm font-bold text-white truncate">Locandina Uscita</span>
-                <div class="flex items-center gap-2 shrink-0">
-                    <a id="ride-lightbox-download" href="#" download="locandina_uscita.jpg"
-                       class="px-3.5 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition">
-                        <i class="fa-solid fa-download"></i> Scarica
-                    </a>
-                    <button type="button" onclick="closeRideImageLightbox()"
-                            class="w-9 h-9 rounded-xl bg-stone-800 hover:bg-stone-700 text-white flex items-center justify-center text-base transition cursor-pointer"
-                            title="Chiudi schermo intero">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-            </div>
-            <img id="ride-lightbox-img" src="" alt="Anteprima a schermo intero"
-                 class="max-h-[82vh] max-w-full w-auto h-auto object-contain rounded-2xl border border-stone-700 shadow-2xl">
-        </div>
-    </div>
-
-    <script>
+        <script>
         // Definizione immediata del fallback SVG globale prima del rendering delle immagini nel body
         window.FALLBACK_QUAD_SVG = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
             `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
@@ -112,6 +89,8 @@
                     }
                     if (OneSignalInstance.User.addTags) {
                         OneSignalInstance.User.addTags({
+                            group: 'GRUPPOQUAD',
+                            all_members: 'true',
                             pilot_id: me.id || '',
                             pilot_name: me.name || '',
                             pilot_city: me.city || ''
@@ -275,6 +254,31 @@
     </style>
 </head>
 <body class="bg-mud-950 text-stone-100 antialiased selection:bg-quad-500 selection:text-white">
+
+<!-- ==================== MODALE ANTEPRIMA IMMAGINE A SCHERMO INTERO ==================== -->
+    <div id="ride-image-lightbox" data-modal="true" style="z-index: 10050;" onclick="closeRideImageLightbox()"
+         class="fixed inset-0 hidden items-center justify-center bg-black/95 backdrop-blur-md p-3 sm:p-6 cursor-zoom-out">
+        <div class="relative max-w-5xl w-full max-h-full flex flex-col items-center justify-center gap-3" onclick="event.stopPropagation()">
+            <div class="w-full flex items-center justify-between gap-2 px-1">
+                <span id="ride-lightbox-title" class="text-xs sm:text-sm font-bold text-white truncate">Locandina Uscita</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <a id="ride-lightbox-download" href="#" download="locandina_uscita.jpg"
+                       class="px-3.5 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition">
+                        <i class="fa-solid fa-download"></i> Scarica
+                    </a>
+                    <button type="button" onclick="closeRideImageLightbox()"
+                            class="w-9 h-9 rounded-xl bg-stone-800 hover:bg-stone-700 text-white flex items-center justify-center text-base transition cursor-pointer"
+                            title="Chiudi schermo intero">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <img id="ride-lightbox-img" src="" alt="Anteprima a schermo intero"
+                 class="max-h-[82vh] max-w-full w-auto h-auto object-contain rounded-2xl border border-stone-700 shadow-2xl">
+        </div>
+    </div>
+
+
 
     <!-- ==================== BANNER NOTIFICA PUSH SIMULATA / LIVE ==================== -->
     <div id="push-notification-banner" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] hidden w-[94%] max-w-md pointer-events-auto">
@@ -1741,16 +1745,24 @@
         }
 
         async function sendGroupPushNotification(title, body) {
-            triggerPushBannerPreview(title, body, 6500);
             if (!PUSH_BACKEND_URL || PUSH_BACKEND_URL.includes("INSERISCI_URL")) {
-                console.warn("PUSH_BACKEND_URL non configurato.");
+                triggerPushBannerPreview(title, body, 6500);
                 return false;
             }
             try {
+                const activeSubIds = pilots
+                    .map(p => p.pushSubscriptionId)
+                    .filter(id => typeof id === 'string' && id.trim().length > 5);
                 const response = await fetch(PUSH_BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title, body, url: window.location.href.split('#')[0] })
+                    body: JSON.stringify({
+                        title,
+                        body,
+                        url: window.location.href.split('#')[0],
+                        included_segments: ["Subscribed Users", "Total Subscriptions"],
+                        include_subscription_ids: activeSubIds
+                    })
                 });
                 const result = await response.json().catch(() => ({}));
                 console.log("Risposta Worker Push:", response.status, result);
@@ -1761,11 +1773,18 @@
                     return false;
                 }
 
-                const count = result.recipients ?? 0;
-                showToast(`Notifica push inviata a ${count} dispositivi!`);
-                return true;
+                const count = Number(result.recipients ?? 0);
+                if (count > 0) {
+                    triggerPushBannerPreview(title, `${body} (Inviata a ${count} dispositivi)`, 6500);
+                    showToast(`Notifica push inviata a ${count} dispositivi del gruppo!`);
+                } else {
+                    triggerPushBannerPreview("⚠️ Invio solo locale (0 iscritti push)", `${body} — Chiedi ai membri di premere 'Attiva Push'.`, 8000);
+                    showToast("Avviso salvato localmente, ma 0 telefoni risultano iscritti alle push.", "error");
+                }
+                return count > 0;
             } catch (err) {
                 console.error("Errore comunicazione Worker:", err);
+                triggerPushBannerPreview("⚠️ Errore invio rete push", body, 7000);
                 showToast("Impossibile contattare il Worker Cloudflare.", "error");
                 return false;
             }
@@ -2721,8 +2740,12 @@
             }, delayMs);
         }
 
-        function executeCloudPushNow() {
-            if (!cloudDbBaseUrl || isCloudPushing) return;
+        function executeCloudPushNow(force = false) {
+            if (!cloudDbBaseUrl) return;
+            if (isCloudPushing && !force) {
+                scheduleCloudPush(350);
+                return;
+            }
             isCloudPushing = true;
             const nowTs = Date.now();
             const snapshotHash = JSON.stringify({ pilots, listings, rides, messages, socialLinks, proposedVideos });
@@ -2984,7 +3007,7 @@
             return pilot.vehicles;
         }
 
-        function saveState() {
+        function saveState(immediateCloud = false) {
             const nowTs = Date.now();
             lastLocalMutationAt = nowTs;
             safeStorage.set('gq_last_local_mutation_at', String(nowTs));
@@ -2994,7 +3017,15 @@
             safeStorage.set('gq_messages_v5', JSON.stringify(messages));
             safeStorage.set('gq_social_links_v5', JSON.stringify(socialLinks));
             safeStorage.set('gq_proposed_videos_v5', JSON.stringify(proposedVideos));
-            pushStateToCloud();
+            if (immediateCloud) {
+                if (pendingPushTimer) {
+                    clearTimeout(pendingPushTimer);
+                    pendingPushTimer = null;
+                }
+                executeCloudPushNow(true);
+            } else {
+                pushStateToCloud();
+            }
         }
 
         function calculateDistanceKm(lat1, lng1, lat2, lng2) {
@@ -4402,11 +4433,11 @@
         }
 
         function openEditRideForm(rideId) {
-            const ride = rides.find(r => r.id === rideId);
+            const ride = rides.find(r => String(r.id) === String(rideId));
             const me = getCurrentPilot();
             const isAdmin = isCurrentUserAdmin(me);
             const past = isRidePast(ride);
-            if (!ride || !me || (past && !isAdmin) || (!past && ride.authorId !== me.id && !isAdmin)) {
+            if (!ride || !me || (!isAdmin && (past || ride.authorId !== me.id))) {
                 return showToast(past ? "Questa uscita è già passata: solo l'amministratore può modificarla." : 'Non hai i permessi per modificare questa uscita.', 'error');
             }
             const panel = document.getElementById('new-ride-panel');
@@ -4533,11 +4564,11 @@
             const me = getCurrentPilot();
             if (!me) return;
 
-            const editId = document.getElementById('ride-edit-id')?.value || '';
-            const existing = editId ? rides.find(r => r.id === editId) : null;
+            const editId = (document.getElementById('ride-edit-id')?.value || '').trim();
+            const existing = editId ? rides.find(r => String(r.id) === String(editId)) : null;
             const isAdmin = isCurrentUserAdmin(me);
             const past = existing ? isRidePast(existing) : false;
-            if (existing && ((past && !isAdmin) || (!past && existing.authorId !== me.id && !isAdmin))) {
+            if (existing && !isAdmin && (past || existing.authorId !== me.id)) {
                 return showToast(past ? "Questa uscita è già passata: solo l'amministratore può modificarla." : 'Non hai i permessi per modificare questa uscita.', 'error');
             }
 
@@ -4589,11 +4620,12 @@
                     });
                 }
 
-                saveState();
+                saveState(true);
                 closeRideForm();
                 renderRides();
                 if (existing) {
-                    showToast('Uscita aggiornata!');
+                    showToast('Uscita aggiornata e sincronizzata!');
+                    await sendGroupPushNotification("📅 Uscita Aggiornata - GRUPPOQUAD", `${me.name} ha modificato "${title}" (${dateLabel}) — Ritrovo: ${meeting}`);
                 } else {
                     showToast('Nuova uscita pubblicata!');
                     await sendNewRidePushNotification(me.name, title, dateLabel, meeting);
@@ -4801,16 +4833,16 @@
         }
 
         function deleteRide(rideId) {
-            const ride = rides.find(r => r.id === rideId);
+            const ride = rides.find(r => String(r.id) === String(rideId));
             const me = getCurrentPilot();
             const isAdmin = isCurrentUserAdmin(me);
             const past = isRidePast(ride);
-            if (!ride || !me || (past && !isAdmin) || (!past && ride.authorId !== me.id && !isAdmin)) {
+            if (!ride || !me || (!isAdmin && (past || ride.authorId !== me.id))) {
                 return showToast(past ? "Questa uscita è già passata: solo l'amministratore può cancellarla." : 'Non hai i permessi per eliminare questa uscita.', 'error');
             }
             showCustomConfirm("Elimina Uscita", "Vuoi rimuovere questa uscita dal calendario del gruppo?", () => {
-                rides = rides.filter(r => r.id !== rideId);
-                saveState();
+                rides = rides.filter(r => String(r.id) !== String(rideId));
+                saveState(true);
                 renderRides();
                 showToast("Uscita rimossa.");
             });
