@@ -266,6 +266,20 @@
 <body class="bg-mud-950 text-stone-100 antialiased selection:bg-quad-500 selection:text-white">
 
 
+<!-- ==================== MODALE MODIFICA COMPLETA PILOTA (ADMIN) ==================== -->
+    <div id="admin-edit-pilot-modal" data-modal="true" class="fixed inset-0 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4" style="z-index:10020;">
+        <div class="w-full max-w-3xl bg-mud-900 border border-quad-500/40 rounded-3xl p-5 space-y-3">
+            <div class="flex items-center justify-between gap-3">
+                <div><h3 class="text-lg font-black text-white">Modifica completa pilota</h3><p class="text-xs text-stone-400">L'amministratore può modificare tutti i campi della scheda in formato JSON.</p></div>
+                <button type="button" onclick="closeAdminEditPilotModal()" class="w-9 h-9 rounded-xl bg-stone-800 text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <input type="hidden" id="admin-edit-pilot-id">
+            <textarea id="admin-edit-pilot-json" rows="18" spellcheck="false" class="w-full bg-mud-950 border border-stone-700 rounded-xl p-3 text-xs text-stone-100 font-mono focus:outline-none focus:border-quad-500"></textarea>
+            <p class="text-[10px] text-amber-300">Non modificare il campo id. Impostando isAdmin: true puoi abilitare un amministratore collaboratore.</p>
+            <div class="flex justify-end gap-2"><button type="button" onclick="closeAdminEditPilotModal()" class="px-4 py-2 rounded-xl bg-stone-800 text-stone-200 text-xs font-bold">Annulla</button><button type="button" onclick="saveAdminEditPilot()" class="px-4 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold">Salva scheda</button></div>
+        </div>
+    </div>
+
 <!-- ==================== MODALE ANTEPRIMA IMMAGINE A SCHERMO INTERO ==================== -->
     <div id="ride-image-lightbox" data-modal="true" style="z-index: 10050;" onclick="closeRideImageLightbox()"
          class="fixed inset-0 hidden items-center justify-center bg-black/95 backdrop-blur-md p-3 sm:p-6 cursor-zoom-out">
@@ -561,7 +575,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-stone-400 mb-1">Password / PIN *</label>
-                        <input type="text" id="new-pilot-pin" required minlength="4" maxlength="32" placeholder="Es. 5829 o Password"
+                        <input type="password" id="new-pilot-pin" autocomplete="new-password" required minlength="4" maxlength="32" placeholder="Es. 5829 o Password"
                                class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white tracking-wider focus:border-quad-500 focus:outline-none">
                     </div>
                     <div>
@@ -1392,7 +1406,7 @@
                                             Password / PIN Personale (4-32 caratteri) *
                                             <span class="ml-1.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 text-[10px] font-bold">Modificabile</span>
                                         </label>
-                                        <input type="text" id="garage-pin" required minlength="4" maxlength="32" placeholder="Es. 1234"
+                                        <input type="password" id="garage-pin" autocomplete="new-password" required minlength="4" maxlength="32" placeholder="Es. 1234"
                                                class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white tracking-wider focus:border-amber-500 focus:outline-none">
                                     </div>
 
@@ -1990,6 +2004,9 @@
             }
         ];
 
+        // Il database viene ricostruito con i piloti reali: non creare account demo predefiniti.
+        DEFAULT_PILOTS.splice(1);
+
         const DEFAULT_LISTINGS = [
             {
                 id: 'lst_1',
@@ -2075,6 +2092,9 @@
         let homeMarkerInstance = null;
         let cloudSyncStatus = 'Connesso';
         let lastCloudSyncAt = null;
+        let pendingRideAttachment = null;
+        let cloudPushQueue = Promise.resolve();
+        let deletedPilotIds = [];
 
         // ==================== FUNZIONI UTILITÀ ====================
         function escapeHtml(str) {
@@ -2163,21 +2183,33 @@
         }
 
         // ==================== CARICAMENTO, SALVATAGGIO & CLOUD SYNC ====================
+        function mergeRecordsById(remoteItems, localItems) {
+            const map = new Map();
+            (Array.isArray(remoteItems) ? remoteItems : []).forEach(item => {
+                if (item && item.id) map.set(String(item.id), item);
+            });
+            (Array.isArray(localItems) ? localItems : []).forEach(item => {
+                if (item && item.id) map.set(String(item.id), { ...(map.get(String(item.id)) || {}), ...item });
+            });
+            return Array.from(map.values());
+        }
+
         function loadInitialState() {
             try {
                 const rawPilots = localStorage.getItem(STORAGE_KEYS.PILOTS) || localStorage.getItem('gq_pilots_v4') || localStorage.getItem('gq_pilots_v3');
                 pilots = rawPilots ? JSON.parse(rawPilots) : JSON.parse(JSON.stringify(DEFAULT_PILOTS));
+                if (!Array.isArray(pilots)) pilots = JSON.parse(JSON.stringify(DEFAULT_PILOTS));
             } catch (e) {
                 pilots = JSON.parse(JSON.stringify(DEFAULT_PILOTS));
             }
 
-            // Assicura che l'admin Nicola Tecchio abbia sempre il numero +393497802369 e i permessi admin
+            // Mantiene l'account principale già previsto dal progetto, senza creare profili demo.
             const adminIdx = pilots.findIndex(p => (p.email || '').toLowerCase() === 'tecchionicola@gmail.com');
             if (adminIdx >= 0) {
-                pilots[adminIdx].phone = '+393497802369';
+                pilots[adminIdx].phone = pilots[adminIdx].phone || '+393497802369';
                 pilots[adminIdx].isAdmin = true;
-            } else {
-                pilots.unshift(JSON.parse(JSON.stringify(DEFAULT_PILOTS[0])));
+            } else if (!pilots.length) {
+                pilots = JSON.parse(JSON.stringify(DEFAULT_PILOTS));
             }
 
             try {
@@ -2188,12 +2220,15 @@
                 proposedVideos = JSON.parse(localStorage.getItem(STORAGE_KEYS.VIDEOS)) || JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
                 qotwState = JSON.parse(localStorage.getItem(STORAGE_KEYS.QOTW)) || { weekKey: '', pilotId: pilots[0]?.id || 'pilot_nicola', history: [pilots[0]?.id || 'pilot_nicola'], likes: {} };
                 currentPilotId = localStorage.getItem(STORAGE_KEYS.CURRENT_ID) || null;
+                deletedPilotIds = JSON.parse(localStorage.getItem('gq_deleted_pilot_ids_v1') || '[]');
+                if (!Array.isArray(deletedPilotIds)) deletedPilotIds = [];
             } catch (e) {
                 listings = JSON.parse(JSON.stringify(DEFAULT_LISTINGS));
                 rides = JSON.parse(JSON.stringify(DEFAULT_RIDES));
                 chatMessages = JSON.parse(JSON.stringify(DEFAULT_CHAT));
                 socialLinks = JSON.parse(JSON.stringify(DEFAULT_SOCIAL_LINKS));
                 proposedVideos = JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+                qotwState = { weekKey: '', pilotId: pilots[0]?.id || 'pilot_nicola', history: [], likes: {} };
             }
         }
 
@@ -2206,49 +2241,42 @@
                 localStorage.setItem(STORAGE_KEYS.SOCIALS, JSON.stringify(socialLinks));
                 localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(proposedVideos));
                 localStorage.setItem(STORAGE_KEYS.QOTW, JSON.stringify(qotwState));
-                if (currentPilotId) {
-                    localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
-                } else {
-                    localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
-                }
+                localStorage.setItem('gq_deleted_pilot_ids_v1', JSON.stringify(deletedPilotIds));
+                if (currentPilotId) localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
+                else localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
             } catch (e) {
                 console.warn('Errore salvataggio locale:', e);
+                showToast('Spazio locale insufficiente: esporta i dati e riduci le immagini.', true);
             }
-
-            if (pushToCloud) {
-                pushStateToCloud();
-            }
+            if (pushToCloud) pushStateToCloud();
         }
 
         async function pullStateFromCloud(notify = false) {
             const baseUrl = normalizeCloudBaseUrl(FIREBASE_RTDB_URL);
             try {
-                updateCloudIndicator('Sync...', 'bg-amber-400');
+                updateCloudIndicator('Lettura Cloud...', 'bg-amber-400');
                 const resp = await fetch(`${baseUrl}/${CLOUD_NODE}.json`, { cache: 'no-store' });
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const data = await resp.json();
                 if (data && typeof data === 'object') {
-                    if (Array.isArray(data.pilots) && data.pilots.length > 0) {
-                        pilots = data.pilots;
-                        const admin = pilots.find(p => (p.email || '').toLowerCase() === 'tecchionicola@gmail.com');
-                        if (admin) {
-                            admin.phone = '+393497802369';
-                            admin.isAdmin = true;
-                        }
-                    }
-                    if (Array.isArray(data.listings)) listings = data.listings;
-                    if (Array.isArray(data.rides)) rides = data.rides;
-                    if (Array.isArray(data.chatMessages)) chatMessages = data.chatMessages;
-                    if (Array.isArray(data.socialLinks) && data.socialLinks.length > 0) socialLinks = data.socialLinks;
-                    if (Array.isArray(data.proposedVideos)) proposedVideos = data.proposedVideos;
+                    // Unisci per ID: un dispositivo con dati meno recenti non elimina record cloud.
+                    deletedPilotIds = Array.from(new Set([...(Array.isArray(data.deletedPilotIds) ? data.deletedPilotIds : []), ...deletedPilotIds]));
+                    pilots = mergeRecordsById(data.pilots, pilots).filter(p => !deletedPilotIds.includes(String(p.id)));
+                    listings = mergeRecordsById(data.listings, listings);
+                    rides = mergeRecordsById(data.rides, rides);
+                    chatMessages = mergeRecordsById(data.chatMessages, chatMessages).slice(-500);
+                    socialLinks = mergeRecordsById(data.socialLinks, socialLinks);
+                    proposedVideos = mergeRecordsById(data.proposedVideos, proposedVideos);
                     if (data.qotwState && typeof data.qotwState === 'object') {
-                        qotwState = { ...qotwState, ...data.qotwState, likes: data.qotwState.likes || {} };
+                        qotwState = { ...qotwState, ...data.qotwState, likes: { ...(qotwState.likes || {}), ...(data.qotwState.likes || {}) } };
                     }
+                    const admin = pilots.find(p => (p.email || '').toLowerCase() === 'tecchionicola@gmail.com');
+                    if (admin) admin.isAdmin = true;
                     saveState(false);
                     refreshAllViews();
-                    if (notify) showToast('Dati scaricati e aggiornati dal Cloud!');
+                    if (notify) showToast('Dati Cloud aggiornati e uniti ai dati locali.');
                 } else if (notify) {
-                    showToast('Nessun dato remoto trovato, uso dati locali.');
+                    showToast('Database Cloud vuoto: mantengo i dati locali.');
                 }
                 lastCloudSyncAt = new Date();
                 updateCloudIndicator('Cloud Live', 'bg-emerald-400');
@@ -2260,33 +2288,66 @@
         }
 
         async function pushStateToCloud(notify = false) {
-            const baseUrl = normalizeCloudBaseUrl(FIREBASE_RTDB_URL);
-            try {
-                updateCloudIndicator('Salvataggio...', 'bg-amber-400');
-                const payload = {
-                    pilots,
-                    listings,
-                    rides,
-                    chatMessages,
-                    socialLinks,
-                    proposedVideos,
-                    qotwState,
-                    updatedAt: Date.now()
-                };
-                const resp = await fetch(`${baseUrl}/${CLOUD_NODE}.json`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                lastCloudSyncAt = new Date();
-                updateCloudIndicator('Cloud Live', 'bg-emerald-400');
-                if (notify) showToast('Sincronizzazione Cloud completata!');
-            } catch (err) {
-                console.warn('Cloud push warning:', err);
-                updateCloudIndicator('Locale Offline', 'bg-amber-500');
-                if (notify) showToast('Errore invio dati al Cloud.', true);
-            }
+            // Serializza le scritture e usa PATCH: non sostituisce più l'intero nodo Firebase.
+            cloudPushQueue = cloudPushQueue.then(async () => {
+                const baseUrl = normalizeCloudBaseUrl(FIREBASE_RTDB_URL);
+                try {
+                    if (!Array.isArray(pilots) || pilots.length === 0) {
+                        throw new Error('Invio bloccato: elenco piloti vuoto.');
+                    }
+                    updateCloudIndicator('Verifica Cloud...', 'bg-amber-400');
+                    const currentResp = await fetch(`${baseUrl}/${CLOUD_NODE}.json`, { cache: 'no-store' });
+                    if (!currentResp.ok) throw new Error('Lettura prima del salvataggio fallita: HTTP ' + currentResp.status);
+                    const remote = await currentResp.json() || {};
+
+                    // Recupera record eventualmente assenti sul dispositivo prima di inviare modifiche.
+                    const mergedDeletedPilotIds = Array.from(new Set([...(Array.isArray(remote.deletedPilotIds) ? remote.deletedPilotIds : []), ...deletedPilotIds]));
+                    const mergedPilots = mergeRecordsById(remote.pilots, pilots).filter(p => !mergedDeletedPilotIds.includes(String(p.id)));
+                    const mergedListings = mergeRecordsById(remote.listings, listings);
+                    const mergedRides = mergeRecordsById(remote.rides, rides);
+                    const mergedChat = mergeRecordsById(remote.chatMessages, chatMessages).slice(-500);
+                    const mergedSocials = mergeRecordsById(remote.socialLinks, socialLinks);
+                    const mergedVideos = mergeRecordsById(remote.proposedVideos, proposedVideos);
+                    if (mergedPilots.length < (Array.isArray(remote.pilots) ? remote.pilots.length : 0)) {
+                        throw new Error('Protezione attiva: il numero di piloti risulterebbe ridotto. Nessun dato inviato.');
+                    }
+
+                    const payload = {
+                        pilots: mergedPilots,
+                        deletedPilotIds: mergedDeletedPilotIds,
+                        listings: mergedListings,
+                        rides: mergedRides,
+                        chatMessages: mergedChat,
+                        socialLinks: mergedSocials,
+                        proposedVideos: mergedVideos,
+                        qotwState: { ...(remote.qotwState || {}), ...(qotwState || {}) },
+                        updatedAt: Date.now()
+                    };
+                    const resp = await fetch(`${baseUrl}/${CLOUD_NODE}.json`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+                    pilots = mergedPilots;
+                    deletedPilotIds = mergedDeletedPilotIds;
+                    listings = mergedListings;
+                    rides = mergedRides;
+                    chatMessages = mergedChat;
+                    socialLinks = mergedSocials;
+                    proposedVideos = mergedVideos;
+                    saveState(false);
+                    lastCloudSyncAt = new Date();
+                    updateCloudIndicator('Cloud Live', 'bg-emerald-400');
+                    if (notify) showToast('Sincronizzazione Cloud completata!');
+                } catch (err) {
+                    console.warn('Cloud push warning:', err);
+                    updateCloudIndicator('Locale Offline', 'bg-amber-500');
+                    if (notify) showToast(err.message || 'Errore invio dati al Cloud.', true);
+                }
+            }).catch(err => console.warn('Cloud queue error:', err));
+            return cloudPushQueue;
         }
 
         function updateCloudIndicator(label, dotClass) {
@@ -2864,42 +2925,64 @@
         // ==================== MAPPA AMICI ====================
         function initOrUpdateFriendsMap() {
             const me = getCurrentPilot();
-            if (!me || typeof L === 'undefined') return;
-            document.getElementById('map-my-home-label').textContent = me.city;
-
             const mapEl = document.getElementById('quad-map');
             if (!mapEl) return;
+            if (typeof L === 'undefined') {
+                mapEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center p-4 text-center text-xs text-red-300">Mappa non caricata. Controlla la connessione e ricarica la pagina.</div>';
+                return;
+            }
+            if (!me) {
+                mapEl.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-xs text-stone-400">Accedi per visualizzare la mappa dei piloti.</div>';
+                return;
+            }
+            const homeLabel = document.getElementById('map-my-home-label');
+            if (homeLabel) homeLabel.textContent = me.city || 'Località non impostata';
 
             if (!quadMapInstance) {
-                quadMapInstance = L.map('quad-map').setView([me.lat || 45.3541, me.lng || 10.7336], 10);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap &copy; CARTO'
-                }).addTo(quadMapInstance);
-            } else {
-                quadMapInstance.invalidateSize();
+                quadMapInstance = L.map(mapEl, { preferCanvas: true }).setView([Number(me.lat) || 45.3541, Number(me.lng) || 10.7336], 10);
+                const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+                });
+                const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap', maxZoom: 19
+                });
+                let fallbackUsed = false;
+                carto.on('tileerror', () => {
+                    if (!fallbackUsed) {
+                        fallbackUsed = true;
+                        quadMapInstance.removeLayer(carto);
+                        osm.addTo(quadMapInstance);
+                    }
+                });
+                carto.addTo(quadMapInstance);
             }
+
+            // Leaflet deve ricalcolare le dimensioni dopo che la scheda nascosta diventa visibile.
+            [80, 250, 600, 1100].forEach(delay => setTimeout(() => {
+                if (quadMapInstance && document.getElementById('tab-map')?.classList.contains('hidden') === false) {
+                    quadMapInstance.invalidateSize({ animate: false, pan: false });
+                }
+            }, delay));
 
             quadMapInstance.eachLayer(layer => {
                 if (layer instanceof L.Marker) quadMapInstance.removeLayer(layer);
             });
-
             const sorted = [...pilots].map(p => ({
                 pilot: p,
-                dist: p.id === me.id ? 0 : (calculateDistanceKm(me.lat, me.lng, p.lat, p.lng) ?? 9999)
+                dist: p.id === me.id ? 0 : (calculateDistanceKm(Number(me.lat), Number(me.lng), Number(p.lat), Number(p.lng)) ?? 9999)
             })).sort((a, b) => a.dist - b.dist);
 
             sorted.forEach(({ pilot, dist }) => {
-                if (typeof pilot.lat !== 'number' || typeof pilot.lng !== 'number') return;
+                const lat = Number(pilot.lat), lng = Number(pilot.lng);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
                 const veh = getPilotActiveVehicle(pilot);
                 const isMe = pilot.id === me.id;
                 const icon = L.divIcon({
                     className: '',
                     html: `<div class="${isMe ? 'home-gps-marker' : 'custom-quad-marker'} w-9 h-9 text-xs font-black text-white">${escapeHtml((pilot.name || 'Q').slice(0, 2).toUpperCase())}</div>`,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
+                    iconSize: [36, 36], iconAnchor: [18, 18]
                 });
-                L.marker([pilot.lat, pilot.lng], { icon })
-                    .addTo(quadMapInstance)
+                L.marker([lat, lng], { icon }).addTo(quadMapInstance)
                     .bindPopup(`<strong>${escapeHtml(pilot.name)}</strong><br>${escapeHtml(veh.model)}<br>${escapeHtml(pilot.city)}${isMe ? ' (Casa Tua)' : ` • ${dist.toFixed(1)} km`}`);
             });
 
@@ -2908,18 +2991,11 @@
                 listEl.innerHTML = sorted.map(({ pilot, dist }) => {
                     const veh = getPilotActiveVehicle(pilot);
                     const isMe = pilot.id === me.id;
-                    return `
-                        <div class="bg-mud-950 border ${isMe ? 'border-emerald-500/40' : 'border-stone-800'} rounded-2xl p-3 flex items-center justify-between gap-2">
-                            <div class="min-w-0">
-                                <p class="text-xs font-bold text-white truncate">${escapeHtml(pilot.name)} ${isMe ? '(Tu)' : ''}</p>
-                                <p class="text-[11px] text-quad-400 truncate">${escapeHtml(veh.model)}</p>
-                                <p class="text-[10px] text-stone-400 truncate">${escapeHtml(pilot.city)}</p>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-xl ${isMe ? 'bg-emerald-500/20 text-emerald-400' : 'bg-stone-800 text-stone-200'} text-[11px] font-black shrink-0">
-                                ${isMe ? 'Casa' : `${dist.toFixed(1)} km`}
-                            </span>
-                        </div>
-                    `;
+                    return `<div class="bg-mud-950 border ${isMe ? 'border-emerald-500/40' : 'border-stone-800'} rounded-2xl p-3 flex items-center justify-between gap-2">
+                        <div class="min-w-0"><p class="text-xs font-bold text-white truncate">${escapeHtml(pilot.name)} ${isMe ? '(Tu)' : ''}</p>
+                        <p class="text-[11px] text-quad-400 truncate">${escapeHtml(veh.model)}</p><p class="text-[10px] text-stone-400 truncate">${escapeHtml(pilot.city)}</p></div>
+                        <span class="px-2.5 py-1 rounded-xl ${isMe ? 'bg-emerald-500/20 text-emerald-400' : 'bg-stone-800 text-stone-200'} text-[11px] font-black shrink-0">${isMe ? 'Casa' : `${dist.toFixed(1)} km`}</span>
+                    </div>`;
                 }).join('');
             }
         }
@@ -2927,7 +3003,8 @@
         function centerMapOnMe() {
             const me = getCurrentPilot();
             if (me && quadMapInstance) {
-                quadMapInstance.setView([me.lat || 45.3541, me.lng || 10.7336], 11);
+                quadMapInstance.setView([Number(me.lat) || 45.3541, Number(me.lng) || 10.7336], 11);
+                setTimeout(() => quadMapInstance?.invalidateSize({ animate: false }), 100);
             }
         }
 
@@ -3034,17 +3111,77 @@
             list.appendChild(row);
         }
 
-        function handleRideProgramUpload() {
-            const file = document.getElementById('ride-program-file')?.files?.[0];
-            if (file) {
-                document.getElementById('ride-program-empty-hint').textContent = `File selezionato: ${file.name}`;
+        function handleRideProgramUpload(event) {
+            const file = event?.target?.files?.[0] || document.getElementById('ride-program-file')?.files?.[0];
+            const box = document.getElementById('ride-program-preview-box');
+            const img = document.getElementById('ride-program-preview-img');
+            const pdfIcon = document.getElementById('ride-program-pdf-icon');
+            const hint = document.getElementById('ride-program-empty-hint');
+            const status = document.getElementById('ride-program-status-label');
+            const badge = document.getElementById('ride-program-type-badge');
+            const clearBtn = document.getElementById('ride-clear-program-btn');
+            if (!file) return;
+            const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!allowed.includes(file.type) || file.size > 1.5 * 1024 * 1024) {
+                showToast('Seleziona un JPG, PNG o PDF valido, massimo 1,5 MB.', true);
+                clearRideProgramInput();
+                return;
             }
+            const reader = new FileReader();
+            reader.onload = () => {
+                pendingRideAttachment = {
+                    name: file.name,
+                    type: file.type,
+                    data: String(reader.result || ''),
+                    size: file.size
+                };
+                if (box) box.classList.remove('hidden');
+                if (hint) hint.textContent = 'File pronto: verrà salvato insieme all’uscita.';
+                if (status) status.textContent = file.name;
+                if (badge) badge.textContent = file.type === 'application/pdf' ? 'PDF' : 'IMMAGINE';
+                if (img) {
+                    if (file.type.startsWith('image/')) {
+                        img.src = pendingRideAttachment.data;
+                        img.classList.remove('hidden');
+                    } else {
+                        img.src = '';
+                        img.classList.add('hidden');
+                    }
+                }
+                if (pdfIcon) pdfIcon.classList.toggle('hidden', file.type !== 'application/pdf');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            };
+            reader.onerror = () => showToast('Non riesco a leggere il file selezionato.', true);
+            reader.readAsDataURL(file);
         }
 
         function clearRideProgramInput() {
             const inp = document.getElementById('ride-program-file');
             if (inp) inp.value = '';
+            pendingRideAttachment = null;
             document.getElementById('ride-program-empty-hint').textContent = 'Nessun file PDF o JPG selezionato';
+            document.getElementById('ride-program-preview-box')?.classList.add('hidden');
+            document.getElementById('ride-program-preview-img')?.classList.add('hidden');
+            document.getElementById('ride-program-pdf-icon')?.classList.add('hidden');
+            document.getElementById('ride-clear-program-btn')?.classList.add('hidden');
+            document.getElementById('ride-program-preview-img')?.removeAttribute('src');
+        }
+
+        function openRideImageLightbox(src, title = 'Locandina Uscita') {
+            if (!src) return;
+            const lb = document.getElementById('ride-image-lightbox');
+            const image = document.getElementById('ride-lightbox-img');
+            const label = document.getElementById('ride-lightbox-title');
+            const download = document.getElementById('ride-lightbox-download');
+            if (!lb || !image) return;
+            image.src = src;
+            if (label) label.textContent = title;
+            if (download) {
+                download.href = src;
+                download.download = (title || 'locandina_uscita').replace(/[^a-z0-9_-]+/gi, '_') + '.jpg';
+            }
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
         }
 
         function handleSaveRide(event) {
@@ -3080,12 +3217,16 @@
                 difficulty,
                 dateTimes,
                 notes,
+                attachment: pendingRideAttachment ? { ...pendingRideAttachment } : null,
                 participants: [me.id],
                 createdAt: Date.now()
             });
 
             saveState();
             closeRideForm();
+            document.getElementById('ride-form')?.reset();
+            document.getElementById('ride-datetimes-list').innerHTML = '';
+            clearRideProgramInput();
             renderRidesList();
             showToast('Nuova uscita pubblicata!');
         }
@@ -3124,6 +3265,8 @@
                             <p class="text-xs text-emerald-400 font-semibold"><i class="fa-regular fa-calendar mr-1.5"></i>${escapeHtml(dtText)}</p>
                             <p class="text-xs text-stone-300"><i class="fa-solid fa-location-dot text-quad-400 mr-1.5"></i>${escapeHtml(r.meeting)}</p>
                             ${r.notes ? `<p class="text-xs text-stone-400 bg-mud-950 border border-stone-800 rounded-xl p-3">${escapeHtml(r.notes)}</p>` : ''}
+                            ${r.attachment?.data && r.attachment.type?.startsWith('image/') ? `<button type="button" class="block w-full text-left" onclick="openRideImageLightbox('${r.attachment.data}')"><img src="${r.attachment.data}" alt="Locandina ${escapeHtml(r.title)}" class="w-full max-h-56 object-contain rounded-xl border border-stone-700 bg-black"><span class="block text-[10px] text-emerald-400 mt-1">Apri anteprima</span></button>` : ''}
+                            ${r.attachment?.data && r.attachment.type === 'application/pdf' ? `<a href="${r.attachment.data}" download="${escapeHtml(r.attachment.name || 'programma.pdf')}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2"><i class="fa-solid fa-file-pdf"></i>${escapeHtml(r.attachment.name || 'Apri PDF')}</a>` : ''}
                         </div>
                         <div class="pt-3 border-t border-stone-800 flex items-center justify-between gap-2">
                             <span class="text-[11px] text-stone-400">Org: <strong class="text-stone-200">${escapeHtml(r.creatorName)}</strong></span>
@@ -3237,9 +3380,13 @@
                         <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p class="text-xs font-black text-white">${escapeHtml(p.name)} <span class="text-stone-400 font-normal">(${escapeHtml(p.email)})</span></p>
-                                <p class="text-[11px] text-stone-400">WhatsApp: ${escapeHtml(p.phone)} &bull; Città: ${escapeHtml(p.city)} &bull; PIN: <strong class="text-amber-400">${escapeHtml(p.pin)}</strong></p>
+                                <p class="text-[11px] text-stone-400">WhatsApp: ${escapeHtml(p.phone)} &bull; Città: ${escapeHtml(p.city)} &bull; Credenziali: <strong class="text-emerald-400">non visualizzate</strong></p>
                             </div>
                             <div class="flex items-center gap-2">
+                                <button type="button" onclick="openAdminEditPilotModal('${escapeHtml(p.id)}')"
+                                        class="px-3 py-1.5 rounded-xl bg-quad-500/20 hover:bg-quad-500 text-quad-300 hover:text-white text-xs font-bold transition cursor-pointer">
+                                    Modifica scheda
+                                </button>
                                 <button type="button" onclick="openAdminEditPinModal('${escapeHtml(p.id)}')"
                                         class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black text-xs font-bold transition cursor-pointer">
                                     Cambia PIN
@@ -3518,43 +3665,56 @@
             modal.classList.remove('flex');
         }
 
-        // Codice Master Segreto privato conosciuto solo dall'Amministratore (non visibile nell'interfaccia)
-        const ADMIN_PRIVATE_MASTER_CODE = "GQ-NICOLA-2026";
-
+        // Il vecchio codice master era incorporato nel JavaScript pubblico: non era un segreto.
+        // Il reset dell'account amministratore va eseguito tramite un backend di autenticazione.
         function handleRecoverPinSubmit(event) {
             event.preventDefault();
             const email = (document.getElementById('recover-pin-email')?.value || '').trim().toLowerCase();
             const pilot = pilots.find(p => (p.email || '').toLowerCase() === email);
             const isAdminAccount = Boolean(pilot && (pilot.isAdmin || email === 'tecchionicola@gmail.com'));
-
             if (isAdminAccount) {
-                const enteredMasterKey = (document.getElementById('admin-verify-master-key')?.value || '').trim();
-                const newPin = (document.getElementById('admin-self-new-pin')?.value || '').trim();
-
-                if (enteredMasterKey !== ADMIN_PRIVATE_MASTER_CODE) {
-                    showToast('Codice Master Amministratore non valido.', true);
-                    return;
-                }
-                if (newPin.length < 4) {
-                    showToast('Il nuovo PIN deve contenere almeno 4 caratteri.', true);
-                    return;
-                }
-
-                pilot.pin = newPin;
-                saveState();
-                closeRecoverPinModal();
-                const loginEmailEl = document.getElementById('login-username-input');
-                const loginPinEl = document.getElementById('login-pin-input');
-                if (loginEmailEl) loginEmailEl.value = pilot.email;
-                if (loginPinEl) loginPinEl.value = newPin;
-                showToast('Nuovo PIN Amministratore salvato e sincronizzato! Ora puoi entrare.');
+                showToast('Reset Admin non disponibile da questa schermata: va configurato Firebase Authentication lato server.', true);
                 return;
             }
-
             const msg = encodeURIComponent(`Ciao Nicola (Admin GRUPPOQUAD), ti chiedo il ripristino della password/PIN per il mio account: ${email}`);
             window.open(`https://wa.me/393497802369?text=${msg}`, '_blank', 'noopener');
             closeRecoverPinModal();
-            showToast('Richiesta pronta su WhatsApp verso l\'Amministratore!');
+            showToast('Richiesta pronta su WhatsApp verso l’Amministratore!');
+        }
+
+        function openAdminEditPilotModal(pilotId) {
+            const me = getCurrentPilot();
+            const target = pilots.find(p => p.id === pilotId);
+            if (!me?.isAdmin || !target) { showToast('Operazione riservata agli amministratori.', true); return; }
+            document.getElementById('admin-edit-pilot-id').value = pilotId;
+            document.getElementById('admin-edit-pilot-json').value = JSON.stringify(target, null, 2);
+            const modal = document.getElementById('admin-edit-pilot-modal');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+        }
+
+        function closeAdminEditPilotModal() {
+            const modal = document.getElementById('admin-edit-pilot-modal');
+            if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        }
+
+        function saveAdminEditPilot() {
+            const me = getCurrentPilot();
+            if (!me?.isAdmin) { showToast('Operazione riservata agli amministratori.', true); return; }
+            const id = document.getElementById('admin-edit-pilot-id').value;
+            const index = pilots.findIndex(p => p.id === id);
+            if (index < 0) return;
+            try {
+                const edited = JSON.parse(document.getElementById('admin-edit-pilot-json').value);
+                if (!edited || typeof edited !== 'object' || Array.isArray(edited)) throw new Error('La scheda deve essere un oggetto JSON.');
+                if (String(edited.id) !== String(id)) throw new Error('Il campo id non può essere modificato.');
+                if (!String(edited.name || '').trim() || !String(edited.email || '').trim()) throw new Error('Nome ed email sono obbligatori.');
+                if (pilots.some((p, i) => i !== index && (p.email || '').toLowerCase() === String(edited.email).toLowerCase())) throw new Error('Email già assegnata a un altro pilota.');
+                if (edited.pin !== undefined && String(edited.pin).length < 4) throw new Error('La password/PIN deve avere almeno 4 caratteri.');
+                if (id === 'pilot_nicola' || String(edited.email).toLowerCase() === 'tecchionicola@gmail.com') edited.isAdmin = true;
+                pilots[index] = edited;
+                saveState(); closeAdminEditPilotModal(); refreshAllViews();
+                showToast('Scheda pilota aggiornata.');
+            } catch (err) { showToast(err.message || 'JSON non valido.', true); }
         }
 
         function openAdminEditPinModal(pilotId) {
@@ -3591,10 +3751,15 @@
         function deletePilotByAdmin(pilotId) {
             const target = pilots.find(p => p.id === pilotId);
             if (!target) return;
+            if (target.isAdmin && pilots.filter(p => p.isAdmin).length <= 1) {
+                showToast('Non puoi eliminare l’unico amministratore.', true);
+                return;
+            }
             showConfirmModal(
                 'Elimina Pilota',
                 `Confermi la rimozione definitiva di ${target.name} dal gruppo?`,
                 () => {
+                    deletedPilotIds = Array.from(new Set([...deletedPilotIds, String(pilotId)]));
                     pilots = pilots.filter(p => p.id !== pilotId);
                     listings = listings.filter(l => l.sellerId !== pilotId);
                     rides = rides.filter(r => r.creatorId !== pilotId);
@@ -3713,6 +3878,7 @@
             'social-links-modal': () => closeSocialLinksModal(),
             'payment-modal': () => closePaymentModal(),
             'admin-edit-pin-modal': () => closeAdminEditPinModal(),
+            'admin-edit-pilot-modal': () => closeAdminEditPilotModal(),
             'recover-pin-modal': () => closeRecoverPinModal(),
             'new-pilot-modal': () => closeNewPilotModal(),
             'vehicle-modal': () => closeVehicleModal(),
@@ -3729,6 +3895,7 @@
             'propose-video-modal',
             'social-links-modal',
             'admin-edit-pin-modal',
+            'admin-edit-pilot-modal',
             'recover-pin-modal',
             'new-pilot-modal',
             'vehicle-modal',
