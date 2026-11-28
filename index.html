@@ -143,6 +143,19 @@
                         }
                     });
                 }
+
+                if (OneSignal.Notifications && OneSignal.Notifications.addEventListener) {
+                    OneSignal.Notifications.addEventListener("foregroundWillDisplay", (event) => {
+                        try {
+                            const notif = event?.notification || {};
+                            const title = notif.title || "Nuovo Avviso GRUPPOQUAD";
+                            const body = notif.body || "Apri l'app per vedere gli aggiornamenti della squadra.";
+                            if (typeof showInAppPushBanner === "function") {
+                                showInAppPushBanner(title, body);
+                            }
+                        } catch (e) {}
+                    });
+                }
             } catch (err) {
                 console.warn("OneSignal init warning:", err);
                 if (typeof updatePushBellButtonUI === "function") {
@@ -1540,6 +1553,10 @@
                                         class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
                                     <i class="fa-solid fa-file-arrow-down"></i> Esporta JSON
                                 </button>
+                                <button type="button" onclick="optimizeAllStoredImages(true)"
+                                        class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                    <i class="fa-solid fa-compress"></i> Comprimi Foto & Libera Spazio
+                                </button>
                             </div>
                         </div>
                         <div id="admin-pin-requests-list" class="space-y-2"></div>
@@ -2457,8 +2474,125 @@
             }
         }
 
+        function compressDataUrlImage(dataUrl, maxDim = 960, quality = 0.72) {
+            return new Promise((resolve) => {
+                if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+                    resolve(dataUrl || '');
+                    return;
+                }
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        let w = img.naturalWidth || img.width;
+                        let h = img.naturalHeight || img.height;
+                        if (!w || !h) { resolve(dataUrl); return; }
+                        if (w > maxDim || h > maxDim) {
+                            if (w >= h) {
+                                h = Math.round((h * maxDim) / w);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w * maxDim) / h);
+                                h = maxDim;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        const compressed = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
+                    } catch (err) {
+                        resolve(dataUrl);
+                    }
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
+        }
+
+        function compressImageFileToDataUrl(file, maxDim = 960, quality = 0.72) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    const raw = String(reader.result || '');
+                    const out = await compressDataUrlImage(raw, maxDim, quality);
+                    resolve(out);
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function estimateLocalStorageKB() {
+            let total = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i) || '';
+                const v = localStorage.getItem(k) || '';
+                total += (k.length + v.length) * 2;
+            }
+            return Math.round(total / 1024);
+        }
+
+        async function optimizeAllStoredImages(notify = false) {
+            const beforeKB = estimateLocalStorageKB();
+            let modified = 0;
+
+            for (const p of (pilots || [])) {
+                if (p.avatar && p.avatar.startsWith('data:image/') && p.avatar.length > 60000) {
+                    const c = await compressDataUrlImage(p.avatar, 480, 0.72);
+                    if (c.length < p.avatar.length) { p.avatar = c; modified++; }
+                }
+                for (const v of (p.vehicles || [])) {
+                    if (v.photo && v.photo.startsWith('data:image/') && v.photo.length > 90000) {
+                        const c = await compressDataUrlImage(v.photo, 960, 0.72);
+                        if (c.length < v.photo.length) { v.photo = c; modified++; }
+                    }
+                }
+            }
+
+            for (const item of (listings || [])) {
+                if (Array.isArray(item.photos)) {
+                    for (let i = 0; i < item.photos.length; i++) {
+                        const ph = item.photos[i];
+                        if (ph && ph.startsWith('data:image/') && ph.length > 90000) {
+                            const c = await compressDataUrlImage(ph, 900, 0.70);
+                            if (c.length < ph.length) { item.photos[i] = c; modified++; }
+                        }
+                    }
+                    if (item.photos[0]) item.photo = item.photos[0];
+                } else if (item.photo && item.photo.startsWith('data:image/') && item.photo.length > 90000) {
+                    const c = await compressDataUrlImage(item.photo, 900, 0.70);
+                    if (c.length < item.photo.length) { item.photo = c; modified++; }
+                }
+            }
+
+            for (const r of (rides || [])) {
+                if (r.attachment && r.attachment.data && r.attachment.data.startsWith('data:image/') && r.attachment.data.length > 120000) {
+                    const c = await compressDataUrlImage(r.attachment.data, 1080, 0.72);
+                    if (c.length < r.attachment.data.length) {
+                        r.attachment.data = c;
+                        r.attachment.size = Math.round((c.length * 3) / 4);
+                        modified++;
+                    }
+                }
+            }
+
+            if (Array.isArray(chatMessages) && chatMessages.length > 300) {
+                chatMessages = chatMessages.slice(-300);
+            }
+
+            saveState(true);
+            const afterKB = estimateLocalStorageKB();
+            if (notify) {
+                showToast(`Ottimizzazione completata: ${modified} foto ridotte (${beforeKB} KB → ${afterKB} KB).`);
+            }
+            return { modified, beforeKB, afterKB };
+        }
+
+        let isAutoCompressingStorage = false;
         function saveState(pushToCloud = true) {
-            try {
+            const writeAll = () => {
                 localStorage.setItem(STORAGE_KEYS.PILOTS, JSON.stringify(pilots));
                 localStorage.setItem(STORAGE_KEYS.LISTINGS, JSON.stringify(listings));
                 localStorage.setItem(STORAGE_KEYS.RIDES, JSON.stringify(rides));
@@ -2470,9 +2604,26 @@
                 localStorage.setItem('gq_deleted_pilot_ids_v1', JSON.stringify(deletedPilotIds));
                 if (currentPilotId) localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
                 else localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
+            };
+            try {
+                writeAll();
             } catch (e) {
                 console.warn('Errore salvataggio locale:', e);
-                showToast('Spazio locale insufficiente: esporta i dati e riduci le immagini.', true);
+                if (!isAutoCompressingStorage) {
+                    isAutoCompressingStorage = true;
+                    showToast('Spazio quasi pieno: compressione automatica foto in corso...');
+                    optimizeAllStoredImages(false).then(res => {
+                        isAutoCompressingStorage = false;
+                        try {
+                            writeAll();
+                            showToast(`Spazio liberato automaticamente (${res.beforeKB} KB → ${res.afterKB} KB)!`);
+                        } catch (e2) {
+                            showToast('Spazio locale insufficiente: esporta il JSON da Admin ed elimina vecchi annunci.', true);
+                        }
+                    });
+                } else {
+                    showToast('Spazio locale insufficiente: esporta i dati e riduci le immagini.', true);
+                }
             }
             if (pushToCloud) pushStateToCloud();
         }
@@ -3538,16 +3689,17 @@
             if (files.length > remaining) {
                 showToast(`Puoi caricare al massimo 5 foto: aggiunte le prime ${remaining}.`, true);
             }
-            toProcess.forEach(file => {
+            toProcess.forEach(async file => {
                 if (!file.type.startsWith('image/')) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                    if (pendingListingPhotos.length < 5 && reader.result) {
-                        pendingListingPhotos.push(String(reader.result));
+                try {
+                    const compressed = await compressImageFileToDataUrl(file, 900, 0.70);
+                    if (pendingListingPhotos.length < 5 && compressed) {
+                        pendingListingPhotos.push(compressed);
                         renderListingPhotosPreview();
                     }
-                };
-                reader.readAsDataURL(file);
+                } catch (err) {
+                    console.warn('Errore compressione foto annuncio:', err);
+                }
             });
             event.target.value = '';
         }
@@ -3651,6 +3803,12 @@
                     createdAt: Date.now()
                 });
                 showToast('Nuovo annuncio pubblicato nel mercatino!');
+                sendGroupPushNotification(
+                    `Nuovo Annuncio Mercatino • € ${price}`,
+                    `${me.name} ha pubblicato: ${title} (${category})`,
+                    'market',
+                    { title, category, price }
+                );
             }
 
             saveState();
@@ -3661,12 +3819,87 @@
 
         // ==================== USCITE & RADUNI ====================
         function openNewRideForm() {
-            document.getElementById('new-ride-panel').classList.remove('hidden');
+            document.getElementById('ride-edit-id').value = '';
+            document.getElementById('ride-form')?.reset();
+            const titleEl = document.getElementById('ride-form-title');
+            if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-calendar-plus text-quad-500"></i> Nuovo Percorso / Uscita Quad';
+            const submitBtn = document.getElementById('ride-submit-btn');
+            if (submitBtn) submitBtn.textContent = 'Salva';
+            clearRideProgramInput();
             const list = document.getElementById('ride-datetimes-list');
-            if (list && !list.children.length) addRideDateTimeRow();
+            if (list) {
+                list.innerHTML = '';
+                addRideDateTimeRow();
+            }
+            document.getElementById('new-ride-panel').classList.remove('hidden');
+            document.getElementById('new-ride-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function openEditRideForm(rideId) {
+            const me = getCurrentPilot();
+            const r = rides.find(item => item.id === rideId);
+            if (!me || !r) return;
+            if (r.creatorId !== me.id && !isCurrentUserAdmin()) {
+                showToast('Solo l\'Amministratore o il creatore possono modificare questa uscita.', true);
+                return;
+            }
+
+            document.getElementById('ride-edit-id').value = r.id;
+            const titleEl = document.getElementById('ride-form-title');
+            if (titleEl) {
+                titleEl.innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-400"></i> Modifica Uscita / Raduno ${isCurrentUserAdmin() && r.creatorId !== me.id ? '(Admin)' : ''}`;
+            }
+            const submitBtn = document.getElementById('ride-submit-btn');
+            if (submitBtn) submitBtn.textContent = 'Aggiorna';
+
+            document.getElementById('ride-title').value = r.title || '';
+            document.getElementById('ride-meeting').value = r.meeting || '';
+            document.getElementById('ride-difficulty').value = r.difficulty || 'Media - Bosco & Fango';
+            document.getElementById('ride-notes').value = r.notes || '';
+
+            const list = document.getElementById('ride-datetimes-list');
+            if (list) {
+                list.innerHTML = '';
+                const dts = Array.isArray(r.dateTimes) && r.dateTimes.length ? r.dateTimes : [{ date: '', time: '09:00' }];
+                dts.forEach(dt => addRideDateTimeRow(dt.date || '', dt.time || '09:00'));
+            }
+
+            // Ripristina eventuale locandina/PDF esistente
+            const existingAtt = r.attachment || r.programFile || null;
+            if (existingAtt && existingAtt.data) {
+                pendingRideAttachment = { ...existingAtt };
+                const box = document.getElementById('ride-program-preview-box');
+                const img = document.getElementById('ride-program-preview-img');
+                const pdfIcon = document.getElementById('ride-program-pdf-icon');
+                const hint = document.getElementById('ride-program-empty-hint');
+                const status = document.getElementById('ride-program-status-label');
+                const badge = document.getElementById('ride-program-type-badge');
+                const clearBtn = document.getElementById('ride-clear-program-btn');
+                if (box) box.classList.remove('hidden');
+                if (hint) hint.textContent = 'Allegato attuale caricato (puoi sostituirlo o rimuoverlo).';
+                if (status) status.textContent = existingAtt.name || 'Allegato uscita';
+                if (badge) badge.textContent = existingAtt.type === 'application/pdf' ? 'PDF' : 'IMMAGINE';
+                if (img) {
+                    if (existingAtt.type?.startsWith('image/')) {
+                        img.src = existingAtt.data;
+                        img.classList.remove('hidden');
+                    } else {
+                        img.src = '';
+                        img.classList.add('hidden');
+                    }
+                }
+                if (pdfIcon) pdfIcon.classList.toggle('hidden', existingAtt.type !== 'application/pdf');
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            } else {
+                clearRideProgramInput();
+            }
+
+            document.getElementById('new-ride-panel').classList.remove('hidden');
+            document.getElementById('new-ride-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function closeRideForm() {
+            document.getElementById('ride-edit-id').value = '';
             document.getElementById('new-ride-panel').classList.add('hidden');
         }
 
@@ -3700,12 +3933,18 @@
                 return;
             }
             const reader = new FileReader();
-            reader.onload = () => {
+            reader.onload = async () => {
+                let finalData = String(reader.result || '');
+                let finalType = file.type;
+                if (file.type.startsWith('image/')) {
+                    finalData = await compressDataUrlImage(finalData, 1080, 0.72);
+                    finalType = 'image/jpeg';
+                }
                 pendingRideAttachment = {
                     name: file.name,
-                    type: file.type,
-                    data: String(reader.result || ''),
-                    size: file.size
+                    type: finalType,
+                    data: finalData,
+                    size: Math.round((finalData.length * 3) / 4)
                 };
                 if (box) box.classList.remove('hidden');
                 if (hint) hint.textContent = 'File pronto: verrà salvato insieme all’uscita.';
@@ -3760,6 +3999,7 @@
             event.preventDefault();
             const me = getCurrentPilot();
             if (!me) return;
+            const editId = (document.getElementById('ride-edit-id')?.value || '').trim();
             const title = (document.getElementById('ride-title')?.value || '').trim();
             const meeting = (document.getElementById('ride-meeting')?.value || '').trim();
             const difficulty = document.getElementById('ride-difficulty')?.value || 'Media - Bosco & Fango';
@@ -3778,6 +4018,33 @@
             });
             if (!dateTimes.length) {
                 dateTimes.push({ date: new Date().toISOString().slice(0, 10), time: '09:00' });
+            }
+
+            if (editId) {
+                const idx = rides.findIndex(item => item.id === editId);
+                if (idx < 0) return;
+                if (rides[idx].creatorId !== me.id && !isCurrentUserAdmin()) {
+                    showToast('Non autorizzato a modificare questa uscita.', true);
+                    return;
+                }
+                rides[idx] = {
+                    ...rides[idx],
+                    title,
+                    meeting,
+                    difficulty,
+                    dateTimes,
+                    notes,
+                    attachment: pendingRideAttachment ? { ...pendingRideAttachment } : null,
+                    updatedAt: Date.now()
+                };
+                saveState();
+                closeRideForm();
+                document.getElementById('ride-form')?.reset();
+                document.getElementById('ride-datetimes-list').innerHTML = '';
+                clearRideProgramInput();
+                renderRidesList();
+                showToast('Uscita / Raduno aggiornato con successo!');
+                return;
             }
 
             rides.unshift({
@@ -3801,6 +4068,13 @@
             clearRideProgramInput();
             renderRidesList();
             showToast('Nuova uscita pubblicata!');
+            const firstDt = dateTimes[0] ? `${dateTimes[0].date} alle ${dateTimes[0].time}` : '';
+            sendGroupPushNotification(
+                `Nuova Uscita Quad: ${title}`,
+                `${me.name} propone ritrovo a ${meeting}${firstDt ? ' (' + firstDt + ')' : ''}`,
+                'ride',
+                { title, meeting }
+            );
         }
 
         function toggleRideParticipation(rideId) {
@@ -3831,6 +4105,20 @@
             });
         }
 
+        function isRidePast(ride) {
+            const dts = Array.isArray(ride?.dateTimes) ? ride.dateTimes : [];
+            if (!dts.length) return false;
+            const now = new Date();
+            const timestamps = dts.map(dt => {
+                if (!dt || !dt.date) return null;
+                const timePart = (dt.time && /^\d{2}:\d{2}$/.test(dt.time)) ? dt.time : '23:59';
+                const parsed = new Date(`${dt.date}T${timePart}:00`);
+                return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+            }).filter(v => v !== null);
+            if (!timestamps.length) return false;
+            return Math.max(...timestamps) < now.getTime();
+        }
+
         function renderRidesList() {
             const container = document.getElementById('rides-list-container');
             const me = getCurrentPilot();
@@ -3838,16 +4126,20 @@
 
             container.innerHTML = rides.map(r => {
                 const joined = Boolean(me && Array.isArray(r.participants) && r.participants.includes(me.id));
+                const isPast = isRidePast(r);
                 const dtText = (r.dateTimes || []).map(dt => `${dt.date} alle ${dt.time}`).join(' • ');
                 return `
-                    <div class="bg-mud-900 border border-stone-800 rounded-3xl p-5 flex flex-col justify-between gap-4">
+                    <div class="bg-mud-900 border ${isPast ? 'border-red-500/35 opacity-85' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4">
                         <div class="space-y-2">
-                            <div class="flex items-center justify-between gap-2">
-                                <span class="px-2.5 py-0.5 rounded-full bg-quad-500/15 text-quad-400 text-[10px] font-bold">${escapeHtml(r.difficulty)}</span>
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-quad-500/15 text-quad-400 text-[10px] font-bold">${escapeHtml(r.difficulty)}</span>
+                                    ${isPast ? '<span class="px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Evento già passato</span>' : ''}
+                                </div>
                                 <span class="text-[11px] text-stone-400"><i class="fa-solid fa-users mr-1"></i>${(r.participants || []).length} partecipanti</span>
                             </div>
                             <h3 class="text-base font-black text-white">${escapeHtml(r.title)}</h3>
-                            <p class="text-xs text-emerald-400 font-semibold"><i class="fa-regular fa-calendar mr-1.5"></i>${escapeHtml(dtText)}</p>
+                            <p class="text-xs ${isPast ? 'text-stone-400 line-through' : 'text-emerald-400'} font-semibold"><i class="fa-regular fa-calendar mr-1.5"></i>${escapeHtml(dtText)}</p>
                             <p class="text-xs text-stone-300"><i class="fa-solid fa-location-dot text-quad-400 mr-1.5"></i>${escapeHtml(r.meeting)}</p>
                             ${r.notes ? `<p class="text-xs text-stone-400 bg-mud-950 border border-stone-800 rounded-xl p-3">${escapeHtml(r.notes)}</p>` : ''}
                             ${r.attachment?.data && r.attachment.type?.startsWith('image/') ? `<button type="button" class="block w-full text-left" onclick="openRideImageLightbox('${r.attachment.data}')"><img src="${r.attachment.data}" alt="Locandina ${escapeHtml(r.title)}" class="w-full max-h-56 object-contain rounded-xl border border-stone-700 bg-black"><span class="block text-[10px] text-emerald-400 mt-1">Apri anteprima</span></button>` : ''}
@@ -3857,14 +4149,23 @@
                             <span class="text-[11px] text-stone-400">Org: <strong class="text-stone-200">${escapeHtml(r.creatorName)}</strong></span>
                             <div class="flex items-center gap-1.5">
                                 ${(me && (r.creatorId === me.id || isCurrentUserAdmin())) ? `
+                                    <button type="button" onclick="openEditRideForm('${escapeHtml(r.id)}')"
+                                            class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black border border-amber-500/30 text-xs font-bold flex items-center gap-1 transition cursor-pointer" title="Modifica uscita / raduno">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                        <span>Modifica${isCurrentUserAdmin() && r.creatorId !== me.id ? ' (Admin)' : ''}</span>
+                                    </button>
                                     <button type="button" onclick="deleteRideItem('${escapeHtml(r.id)}')"
                                             class="px-2.5 py-2 rounded-xl bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition cursor-pointer" title="Elimina uscita">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>` : ''}
-                                <button type="button" onclick="toggleRideParticipation('${escapeHtml(r.id)}')"
-                                        class="px-4 py-2 rounded-xl ${joined ? 'bg-emerald-600 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold transition cursor-pointer">
-                                    ${joined ? '<i class="fa-solid fa-check mr-1"></i>Partecipo' : 'Partecipa al Giro'}
-                                </button>
+                                ${isPast ? `
+                                    <span class="px-3.5 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-400 text-xs font-bold select-none">
+                                        Evento già passato
+                                    </span>` : `
+                                    <button type="button" onclick="toggleRideParticipation('${escapeHtml(r.id)}')"
+                                            class="px-4 py-2 rounded-xl ${joined ? 'bg-emerald-600 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold transition cursor-pointer">
+                                        ${joined ? '<i class="fa-solid fa-check mr-1"></i>Partecipo' : 'Partecipa al Giro'}
+                                    </button>`}
                             </div>
                         </div>
                     </div>
@@ -3950,6 +4251,12 @@
             input.value = '';
             saveState();
             renderChatMessages();
+            sendGroupPushNotification(
+                `Radio Squadra • ${me.name}`,
+                text.length > 110 ? text.slice(0, 107) + '...' : text,
+                'radio',
+                { sender: me.name }
+            );
         }
 
         // ==================== PROFILO, GARAGE MULTI-MEZZO & ADMIN ====================
@@ -4078,16 +4385,16 @@
             if (prev) prev.src = url || window.FALLBACK_QUAD_SVG;
         }
 
-        function handleVehiclePhotoUpload(event) {
+        async function handleVehiclePhotoUpload(event) {
             const file = event.target?.files?.[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                const dataUrl = e.target.result;
+            try {
+                const dataUrl = await compressImageFileToDataUrl(file, 960, 0.72);
                 document.getElementById('vehicle-photo-url').value = dataUrl;
                 previewVehiclePhotoUrl(dataUrl);
-            };
-            reader.readAsDataURL(file);
+            } catch (err) {
+                console.warn('Errore compressione foto mezzo:', err);
+            }
         }
 
         function handleSaveVehicle(event) {
@@ -4676,8 +4983,59 @@
             modal.classList.remove('flex');
         }
 
+        let pushBannerTimeout = null;
+        function showInAppPushBanner(title, body) {
+            const banner = document.getElementById('push-notification-banner');
+            const titleEl = document.getElementById('push-banner-title');
+            const bodyEl = document.getElementById('push-banner-body');
+            if (!banner) return;
+            if (titleEl) titleEl.textContent = title || 'Avviso GRUPPOQUAD';
+            if (bodyEl) bodyEl.textContent = body || '';
+            banner.classList.remove('hidden');
+            banner.classList.add('push-banner-enter');
+            if (pushBannerTimeout) clearTimeout(pushBannerTimeout);
+            pushBannerTimeout = setTimeout(() => closePushBanner(), 7000);
+        }
+
         function closePushBanner() {
             document.getElementById('push-notification-banner')?.classList.add('hidden');
+        }
+
+        async function sendGroupPushNotification(title, body, category = 'general', extraData = {}) {
+            if (!PUSH_BACKEND_URL) return;
+            const me = typeof getCurrentPilot === 'function' ? getCurrentPilot() : null;
+            const subscriptionIds = pilots
+                .filter(p => p && p.id !== me?.id && p.pushSubscriptionId)
+                .map(p => p.pushSubscriptionId);
+
+            const payload = {
+                app_id: ONESIGNAL_APP_ID,
+                title,
+                body,
+                category,
+                sender_id: me?.id || '',
+                sender_name: me?.name || 'GRUPPOQUAD',
+                subscription_ids: subscriptionIds,
+                url: window.location.origin + window.location.pathname,
+                data: {
+                    group: 'GRUPPOQUAD',
+                    category,
+                    ...extraData
+                }
+            };
+
+            try {
+                const resp = await fetch(PUSH_BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) {
+                    console.warn('Push worker response:', resp.status);
+                }
+            } catch (err) {
+                console.warn('Errore invio push al worker Cloudflare:', err);
+            }
         }
 
         function updatePushBellButtonUI(enabled) {
