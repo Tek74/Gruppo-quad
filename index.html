@@ -266,7 +266,42 @@
 <body class="bg-mud-950 text-stone-100 antialiased selection:bg-quad-500 selection:text-white">
 
 
-<!-- ==================== MODALE MODIFICA COMPLETA PILOTA (ADMIN) ==================== -->
+<!-- ==================== MODALE GUIDA INSTALLAZIONE APP ==================== -->
+    <div id="pwa-install-guide-modal" data-modal="true" style="z-index: 10030;" class="fixed inset-0 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+        <div class="bg-mud-900 border border-quad-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
+                <h3 class="text-lg font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-mobile-screen-button text-quad-500"></i> Installa App GRUPPOQUAD
+                </h3>
+                <button type="button" onclick="closeInstallGuideModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div id="install-guide-ios" class="hidden space-y-2.5 text-xs text-stone-300 leading-relaxed">
+                <p class="font-bold text-quad-400">Su iPhone / iPad (Safari):</p>
+                <ol class="list-decimal list-inside space-y-1.5">
+                    <li>Tocca l'icona <strong>Condividi</strong> <i class="fa-solid fa-arrow-up-from-bracket text-sky-400"></i> nella barra di Safari.</li>
+                    <li>Scorri verso il basso e seleziona <strong>"Aggiungi alla schermata Home"</strong> <i class="fa-regular fa-square-plus text-emerald-400"></i>.</li>
+                    <li>Conferma toccando <strong>Aggiungi</strong> in alto a destra.</li>
+                </ol>
+            </div>
+            <div id="install-guide-android" class="space-y-2.5 text-xs text-stone-300 leading-relaxed">
+                <p class="font-bold text-quad-400">Su Android (Chrome) o Computer:</p>
+                <ol class="list-decimal list-inside space-y-1.5">
+                    <li>Apri il menu del browser (<i class="fa-solid fa-ellipsis-vertical"></i> in alto a destra).</li>
+                    <li>Seleziona <strong>"Installa app"</strong> oppure <strong>"Aggiungi a schermata Home"</strong>.</li>
+                    <li>Conferma per avere l'icona <strong>GRUPPOQUAD</strong> sempre pronta sul telefono.</li>
+                </ol>
+            </div>
+            <div class="pt-2 flex justify-end">
+                <button type="button" onclick="closeInstallGuideModal()" class="px-5 py-2.5 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold cursor-pointer">
+                    Ho capito
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODALE MODIFICA COMPLETA PILOTA (ADMIN) ==================== -->
     <div id="admin-edit-pilot-modal" data-modal="true" class="fixed inset-0 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4" style="z-index:10020;">
         <div class="w-full max-w-3xl bg-mud-900 border border-quad-500/40 rounded-3xl p-5 space-y-3">
             <div class="flex items-center justify-between gap-3">
@@ -304,6 +339,112 @@
     </div>
 
 
+
+    <!-- ==================== MODALE NUOVO / MODIFICA ANNUNCIO MERCATINO ==================== -->
+    <div id="listing-modal" data-modal="true" style="z-index: 9985;" class="fixed inset-0 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl my-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
+                <h3 id="listing-modal-title" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-tag text-quad-500"></i> Nuovo Annuncio Mercatino
+                </h3>
+                <button type="button" onclick="closeListingModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="listing-form" onsubmit="handleSaveListing(event)" class="space-y-3.5">
+                <input type="hidden" id="listing-edit-id" value="">
+
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Titolo Annuncio *</label>
+                    <input type="text" id="listing-title" required maxlength="90" placeholder="Es. Scarico completo Polaris / Gomme Maxxis 26"
+                           class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">Categoria *</label>
+                        <select id="listing-category" required class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none">
+                            <option value="Quad/ATV">Quad / ATV Interi</option>
+                            <option value="Scarichi">Scarichi & Terminali</option>
+                            <option value="Motore/Carburazione">Motore / Carburazione</option>
+                            <option value="Ciclistica/Freni">Ciclistica / Sospensioni / Freni</option>
+                            <option value="Gomme/Cerchi">Gomme / Cerchi / Distanziali</option>
+                            <option value="Abbigliamento">Abbigliamento & Protezioni</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">Stato Annuncio *</label>
+                        <select id="listing-status" required class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3 py-2.5 text-xs font-semibold text-white focus:outline-none">
+                            <option value="Disponibile">Disponibile</option>
+                            <option value="In trattativa">In trattativa</option>
+                            <option value="Prenotato">Prenotato</option>
+                            <option value="Venduto">Venduto</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">Prezzo (€) *</label>
+                        <input type="number" id="listing-price" required min="0" step="1" placeholder="150"
+                               class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2.5 text-sm font-bold text-white focus:outline-none">
+                    </div>
+                    <div class="pt-0 sm:pt-5">
+                        <label class="flex items-center gap-2.5 bg-mud-950 border border-stone-700 hover:border-quad-500/60 rounded-xl px-3.5 py-2.5 cursor-pointer select-none">
+                            <input type="checkbox" id="listing-negotiable" class="w-4 h-4 accent-quad-500 rounded">
+                            <span class="text-xs font-bold text-quad-400">Prezzo trattabile</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">Contatto WhatsApp Proprietario *</label>
+                        <input type="tel" id="listing-phone" required placeholder="+393401234567"
+                               class="w-full bg-mud-800 border border-stone-700 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-stone-300 mb-1">Località / Zona *</label>
+                        <input type="text" id="listing-city" required placeholder="Valeggio sul Mincio (VR)"
+                               class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Breve Descrizione *</label>
+                    <textarea id="listing-description" rows="3" required maxlength="450" placeholder="Condizioni, compatibilità modelli, eventuali difetti o accessori inclusi..."
+                              class="w-full bg-mud-800 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"></textarea>
+                </div>
+
+                <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-white flex items-center gap-1.5">
+                            <i class="fa-solid fa-images text-quad-400"></i> Foto Annuncio (<span id="listing-photos-count">0</span>/5 max)
+                        </label>
+                        <span class="text-[10px] text-stone-400">JPG / PNG / WebP</span>
+                    </div>
+                    <input type="file" id="listing-photos-file" accept="image/*" multiple onchange="handleListingPhotosUpload(event)"
+                           class="w-full text-[11px] text-stone-300 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-quad-600 file:text-white hover:file:bg-quad-500 cursor-pointer">
+                    <div class="flex gap-2">
+                        <input type="url" id="listing-photo-url-input" placeholder="Oppure incolla URL immagine https://..."
+                               class="flex-1 bg-mud-800 border border-stone-700 rounded-xl px-3 py-1.5 text-xs text-white focus:border-quad-500 focus:outline-none">
+                        <button type="button" onclick="addListingPhotoFromUrl()" class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-quad-600 text-white text-xs font-bold transition cursor-pointer">
+                            Aggiungi
+                        </button>
+                    </div>
+                    <div id="listing-photos-preview-grid" class="grid grid-cols-5 gap-2 pt-1"></div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeListingModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-semibold cursor-pointer">Annulla</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-quad-600 to-quad-500 hover:from-quad-500 hover:to-amber-500 text-white text-xs font-black shadow-lg shadow-quad-600/25 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> Salva Annuncio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- ==================== BANNER NOTIFICA PUSH SIMULATA / LIVE ==================== -->
     <div id="push-notification-banner" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] hidden w-[94%] max-w-md pointer-events-auto">
@@ -478,23 +619,27 @@
         </div>
     </div>
 
-    <!-- ==================== MODALE RIPRISTINO PASSWORD / PIN PERSONALE ==================== -->
+    <!-- ==================== MODALE RIPRISTINO PASSWORD / PIN VIA EMAIL (CLOUD LIVE) ==================== -->
     <div id="recover-pin-modal" data-modal="true" style="z-index: 9980;" class="fixed inset-0 hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-md w-full p-6 shadow-2xl my-auto">
-            <div class="flex items-center justify-between pb-3 border-b border-stone-800 mb-4">
+        <div class="bg-mud-900 border border-stone-700 rounded-3xl max-w-md w-full p-6 shadow-2xl my-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-amber-400"></i> Richiedi Reset Password / PIN
+                    <i class="fa-solid fa-envelope-open-text text-amber-400"></i> Recupera PIN / Password via Email
                 </h3>
                 <button type="button" onclick="closeRecoverPinModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
-            <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 mb-4 text-xs text-stone-300 leading-relaxed space-y-1">
+            <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-xs text-stone-300 leading-relaxed space-y-1.5">
                 <p class="font-bold text-amber-300 flex items-center gap-1.5">
-                    <i class="fa-solid fa-lock"></i> Protezione Account Attiva
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Invio Richiesta su Cloud Live
                 </p>
                 <p>
-                    Per i piloti del gruppo il ripristino viene gestito dall'<strong>Amministratore</strong>. Se invece sei l'<strong>Amministratore</strong>, inserisci la tua email e le ultime 4 cifre del tuo cellulare per impostare subito un nuovo PIN.
+                    Inserisci la tua <strong>Email registrata</strong>: la richiesta di recupero PIN/Password verrà registrata su <strong>Cloud Live</strong> e inviata via email.
+                </p>
+                <p class="text-[11px] text-stone-400">
+                    <i class="fa-solid fa-user-shield text-quad-400 mr-1"></i>
+                    Lo scaricamento e la gestione delle richieste Cloud Live sono riservati esclusivamente all'<strong>Amministratore</strong>.
                 </p>
             </div>
             <form onsubmit="handleRecoverPinSubmit(event)" class="space-y-3.5">
@@ -504,14 +649,20 @@
                            class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:border-amber-500 focus:outline-none">
                 </div>
 
+                <div>
+                    <label class="block text-xs font-semibold text-stone-300 mb-1">Note aggiuntive (opzionale)</label>
+                    <input type="text" id="recover-pin-note" maxlength="140" placeholder="Es. Ho cambiato telefono e non ricordo il PIN"
+                           class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2 text-xs text-white focus:border-amber-500 focus:outline-none">
+                </div>
+
                 <!-- Sezione di Auto-Reset riservata esclusivamente all'Amministratore -->
                 <div id="admin-self-reset-box" class="hidden space-y-3 bg-mud-950 border border-quad-500/40 rounded-2xl p-3.5">
                     <p class="text-[11px] font-bold text-quad-400 flex items-center gap-1.5">
                         <i class="fa-solid fa-user-shield"></i> Verifica Identità Amministratore
                     </p>
                     <div>
-                        <label class="block text-[11px] font-semibold text-stone-300 mb-1">Codice Master Segreto Amministratore *</label>
-                        <input type="password" id="admin-verify-master-key" placeholder="Inserisci il Codice Master personale"
+                        <label class="block text-[11px] font-semibold text-stone-300 mb-1">Codice di Verifica *</label>
+                        <input type="password" id="admin-verify-master-key" placeholder="Inserisci verifica Amministratore"
                                class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2 text-sm text-white tracking-widest focus:border-quad-500 focus:outline-none">
                     </div>
                     <div>
@@ -523,8 +674,8 @@
 
                 <div class="pt-2 flex flex-col sm:flex-row justify-end gap-2">
                     <button type="button" onclick="closeRecoverPinModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-semibold cursor-pointer">Annulla</button>
-                    <button type="submit" id="recover-pin-submit-btn" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer">
-                        <i class="fa-brands fa-whatsapp text-sm"></i> Contatta Admin su WhatsApp
+                    <button type="submit" id="recover-pin-submit-btn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-quad-600 hover:from-amber-500 hover:to-quad-500 text-white text-xs font-bold shadow-lg shadow-amber-600/20 flex items-center justify-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-envelope text-sm"></i> Invia Richiesta via Email & Cloud
                     </button>
                 </div>
             </form>
@@ -678,17 +829,23 @@
                 </button>
             </form>
 
-            <!-- Azioni Rapide: Nuovo Pilota + Profilo Demo -->
-            <div class="grid grid-cols-2 gap-2.5 pt-1">
+            <!-- Azioni Rapide: Nuovo Pilota + Installa App + Profilo Demo -->
+            <div class="grid grid-cols-3 gap-2 pt-1">
                 <button type="button" onclick="openNewPilotModal()"
-                        class="py-2.5 px-3 rounded-xl bg-forest-600 hover:bg-forest-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-lg shadow-forest-600/25 transition cursor-pointer">
+                        class="py-2.5 px-2.5 rounded-xl bg-forest-600 hover:bg-forest-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-lg shadow-forest-600/25 transition cursor-pointer">
                     <i class="fa-solid fa-user-plus"></i>
                     <span>Nuovo Pilota</span>
                 </button>
+                <button type="button" id="login-install-app-btn" onclick="triggerPwaInstall()"
+                        class="py-2.5 px-2.5 rounded-xl bg-quad-500/20 hover:bg-quad-600 border border-quad-500/50 text-quad-300 hover:text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-lg shadow-quad-600/15 transition cursor-pointer"
+                        title="Installa GRUPPOQUAD sul telefono o PC">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Installa</span>
+                </button>
                 <button type="button" onclick="fillDemoCredentials('profilo.demo@gmail.com', '1234')"
-                        class="py-2.5 px-3 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
+                        class="py-2.5 px-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer">
                     <i class="fa-solid fa-user-check text-quad-400"></i>
-                    <span>Profilo Demo</span>
+                    <span>Demo</span>
                 </button>
             </div>
 
@@ -742,7 +899,14 @@
                 </nav>
 
                 <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" id="push-bell-btn" onclick="requestPushNotificationsPermission()"
+                    <button type="button" id="header-install-app-btn" onclick="triggerPwaInstall()"
+                            class="px-3 py-2 rounded-xl bg-quad-500/20 hover:bg-quad-600 border border-quad-500/40 text-xs font-bold text-quad-300 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                            title="Installa GRUPPOQUAD come App sul dispositivo">
+                        <i class="fa-solid fa-download"></i>
+                        <span class="hidden sm:inline">Installa</span>
+                    </button>
+
+                    <button type="button" id="push-bell-btn" onclick="requestPushNotificationsPermission()" 
                             class="px-3 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-400 flex items-center gap-1.5 transition cursor-pointer"
                             title="Gestisci notifiche push su questo telefono/dispositivo">
                         <i id="push-bell-icon" class="fa-solid fa-bell"></i>
@@ -753,7 +917,7 @@
                         <i class="fa-solid fa-hand-holding-heart"></i>
                         <span class="hidden sm:inline">Offerta Libera</span>
                     </button>
-                    <button type="button" onclick="openCloudSyncModal()" class="px-3 py-2 rounded-xl bg-stone-800/90 hover:bg-stone-700 border border-stone-700 text-xs font-bold text-stone-200 flex items-center gap-1.5 transition cursor-pointer" title="Stato sincronizzazione Cloud del gruppo">
+                    <button type="button" id="header-cloud-sync-btn" onclick="openCloudSyncModal()" class="px-3 py-2 rounded-xl bg-stone-800/90 hover:bg-stone-700 border border-stone-700 text-xs font-bold text-stone-200 flex items-center gap-1.5 transition cursor-pointer" title="Cloud Live (Scaricamento riservato all'Amministratore)">
                         <span class="cloud-status-dot w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span class="cloud-status-label hidden lg:inline">Cloud Live</span>
                     </button>
@@ -1206,8 +1370,10 @@
                     <select id="market-status-filter" onchange="renderMarketplace()"
                             class="bg-mud-950 border border-stone-700 focus:border-quad-500 rounded-xl px-3.5 py-2 text-xs font-semibold text-stone-200 focus:outline-none">
                         <option value="ALL">Tutti gli Stati</option>
-                        <option value="Disponibile">Solo Disponibili</option>
-                        <option value="Venduto">Già Venduti</option>
+                        <option value="Disponibile">Disponibili</option>
+                        <option value="In trattativa">In trattativa</option>
+                        <option value="Prenotato">Prenotati</option>
+                        <option value="Venduto">Venduti</option>
                     </select>
                 </div>
 
@@ -1325,6 +1491,30 @@
                     <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 text-[11px] text-amber-200">
                         Modifica profilo: puoi intervenire su tutti i campi e parametri del partecipante. La cancellazione rimuove anche annunci, messaggi e uscite creati da quel profilo.
                     </div>
+
+                    <!-- Box Richieste Recupero PIN/Password su Cloud Live (Solo Admin) -->
+                    <div class="bg-mud-950 border border-amber-500/40 rounded-2xl p-4 mb-4 space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-cloud-arrow-down"></i> Cloud Live: Richieste Recupero PIN / Password
+                                </h3>
+                                <p class="text-[11px] text-stone-400">Scaricamento dati e gestione richieste via email riservati esclusivamente all'Amministratore.</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="downloadCloudLiveForAdmin()"
+                                        class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                    <i class="fa-solid fa-cloud-arrow-down"></i> Scarica Cloud Live
+                                </button>
+                                <button type="button" onclick="exportCloudBackupJsonAdmin()"
+                                        class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
+                                    <i class="fa-solid fa-file-arrow-down"></i> Esporta JSON
+                                </button>
+                            </div>
+                        </div>
+                        <div id="admin-pin-requests-list" class="space-y-2"></div>
+                    </div>
+
                     <div id="admin-pilots-list" class="space-y-3"></div>
                 </section>
                 <div class="max-w-5xl mx-auto bg-mud-900 border border-stone-800 rounded-3xl overflow-hidden shadow-xl">
@@ -2016,6 +2206,7 @@
                 title: 'Terminale Scarico Completo Raptor 700',
                 category: 'Scarichi',
                 price: 240,
+                negotiable: true,
                 condition: 'Usato - Ottimo Stato',
                 city: 'Peschiera del Garda (VR)',
                 status: 'Disponibile',
@@ -2031,6 +2222,7 @@
                 title: 'Set 4 Distanziali Ruota +45mm Polaris / Yamaha',
                 category: 'Gomme/Cerchi',
                 price: 85,
+                negotiable: false,
                 condition: 'Pari al Nuovo',
                 city: 'Valeggio sul Mincio (VR)',
                 status: 'Disponibile',
@@ -2086,6 +2278,7 @@
         let chatMessages = [];
         let socialLinks = [];
         let proposedVideos = [];
+        let pinRecoveryRequests = [];
         let qotwState = { weekKey: '', pilotId: 'pilot_nicola', history: ['pilot_nicola'], likes: {} };
         let quadMapInstance = null;
         let homeMapInstance = null;
@@ -2218,6 +2411,8 @@
                 chatMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT)) || JSON.parse(JSON.stringify(DEFAULT_CHAT));
                 socialLinks = JSON.parse(localStorage.getItem(STORAGE_KEYS.SOCIALS)) || JSON.parse(JSON.stringify(DEFAULT_SOCIAL_LINKS));
                 proposedVideos = JSON.parse(localStorage.getItem(STORAGE_KEYS.VIDEOS)) || JSON.parse(JSON.stringify(DEFAULT_VIDEOS));
+                pinRecoveryRequests = JSON.parse(localStorage.getItem('gq_pin_recovery_reqs_v1') || '[]');
+                if (!Array.isArray(pinRecoveryRequests)) pinRecoveryRequests = [];
                 qotwState = JSON.parse(localStorage.getItem(STORAGE_KEYS.QOTW)) || { weekKey: '', pilotId: pilots[0]?.id || 'pilot_nicola', history: [pilots[0]?.id || 'pilot_nicola'], likes: {} };
                 currentPilotId = localStorage.getItem(STORAGE_KEYS.CURRENT_ID) || null;
                 deletedPilotIds = JSON.parse(localStorage.getItem('gq_deleted_pilot_ids_v1') || '[]');
@@ -2240,6 +2435,7 @@
                 localStorage.setItem(STORAGE_KEYS.CHAT, JSON.stringify(chatMessages));
                 localStorage.setItem(STORAGE_KEYS.SOCIALS, JSON.stringify(socialLinks));
                 localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(proposedVideos));
+                localStorage.setItem('gq_pin_recovery_reqs_v1', JSON.stringify(pinRecoveryRequests));
                 localStorage.setItem(STORAGE_KEYS.QOTW, JSON.stringify(qotwState));
                 localStorage.setItem('gq_deleted_pilot_ids_v1', JSON.stringify(deletedPilotIds));
                 if (currentPilotId) localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
@@ -2251,7 +2447,19 @@
             if (pushToCloud) pushStateToCloud();
         }
 
-        async function pullStateFromCloud(notify = false) {
+        function isCurrentUserAdmin() {
+            const me = getCurrentPilot();
+            return Boolean(me && (me.isAdmin || (me.email || '').toLowerCase() === 'tecchionicola@gmail.com'));
+        }
+
+        async function pullStateFromCloud(notify = false, isSystemBoot = false) {
+            // Lo scaricamento da Cloud Live è consentito solo all'Amministratore (o in fase di inizializzazione interna protetta)
+            if (!isSystemBoot && !isCurrentUserAdmin()) {
+                if (notify) {
+                    showToast('Accesso negato: solo l’Amministratore può scaricare i dati da Cloud Live.', true);
+                }
+                return;
+            }
             const baseUrl = normalizeCloudBaseUrl(FIREBASE_RTDB_URL);
             try {
                 updateCloudIndicator('Lettura Cloud...', 'bg-amber-400');
@@ -2267,6 +2475,7 @@
                     chatMessages = mergeRecordsById(data.chatMessages, chatMessages).slice(-500);
                     socialLinks = mergeRecordsById(data.socialLinks, socialLinks);
                     proposedVideos = mergeRecordsById(data.proposedVideos, proposedVideos);
+                    pinRecoveryRequests = mergeRecordsById(data.pinRecoveryRequests, pinRecoveryRequests);
                     if (data.qotwState && typeof data.qotwState === 'object') {
                         qotwState = { ...qotwState, ...data.qotwState, likes: { ...(qotwState.likes || {}), ...(data.qotwState.likes || {}) } };
                     }
@@ -2274,7 +2483,7 @@
                     if (admin) admin.isAdmin = true;
                     saveState(false);
                     refreshAllViews();
-                    if (notify) showToast('Dati Cloud aggiornati e uniti ai dati locali.');
+                    if (notify) showToast('Scaricamento Cloud Live completato (Solo Admin).');
                 } else if (notify) {
                     showToast('Database Cloud vuoto: mantengo i dati locali.');
                 }
@@ -2285,6 +2494,42 @@
                 updateCloudIndicator('Locale Offline', 'bg-amber-500');
                 if (notify) showToast('Impossibile raggiungere il Cloud al momento.', true);
             }
+        }
+
+        async function downloadCloudLiveForAdmin() {
+            if (!isCurrentUserAdmin()) {
+                showToast('Operazione riservata esclusivamente all’Amministratore.', true);
+                return;
+            }
+            await pullStateFromCloud(true, false);
+        }
+
+        function exportCloudBackupJsonAdmin() {
+            if (!isCurrentUserAdmin()) {
+                showToast('Solo l’Amministratore può scaricare il backup Cloud Live.', true);
+                return;
+            }
+            const exportObj = {
+                exportedAt: new Date().toISOString(),
+                pilots,
+                pinRecoveryRequests,
+                listings,
+                rides,
+                chatMessages,
+                socialLinks,
+                proposedVideos,
+                qotwState
+            };
+            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gruppoquad_cloud_live_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('File Cloud Live scaricato sul dispositivo dell’Amministratore.');
         }
 
         async function pushStateToCloud(notify = false) {
@@ -2308,6 +2553,7 @@
                     const mergedChat = mergeRecordsById(remote.chatMessages, chatMessages).slice(-500);
                     const mergedSocials = mergeRecordsById(remote.socialLinks, socialLinks);
                     const mergedVideos = mergeRecordsById(remote.proposedVideos, proposedVideos);
+                    const mergedPinReqs = mergeRecordsById(remote.pinRecoveryRequests, pinRecoveryRequests);
                     if (mergedPilots.length < (Array.isArray(remote.pilots) ? remote.pilots.length : 0)) {
                         throw new Error('Protezione attiva: il numero di piloti risulterebbe ridotto. Nessun dato inviato.');
                     }
@@ -2320,6 +2566,7 @@
                         chatMessages: mergedChat,
                         socialLinks: mergedSocials,
                         proposedVideos: mergedVideos,
+                        pinRecoveryRequests: mergedPinReqs,
                         qotwState: { ...(remote.qotwState || {}), ...(qotwState || {}) },
                         updatedAt: Date.now()
                     };
@@ -2337,6 +2584,7 @@
                     chatMessages = mergedChat;
                     socialLinks = mergedSocials;
                     proposedVideos = mergedVideos;
+                    pinRecoveryRequests = mergedPinReqs;
                     saveState(false);
                     lastCloudSyncAt = new Date();
                     updateCloudIndicator('Cloud Live', 'bg-emerald-400');
@@ -2461,6 +2709,7 @@
                     document.getElementById('app-shell').classList.add('hidden');
                     document.getElementById('login-screen').classList.remove('hidden');
                     renderLoginSocialLinks();
+            updateInstallButtonsUI(false);
                 }
             );
         }
@@ -2940,21 +3189,10 @@
 
             if (!quadMapInstance) {
                 quadMapInstance = L.map(mapEl, { preferCanvas: true }).setView([Number(me.lat) || 45.3541, Number(me.lng) || 10.7336], 10);
-                const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
-                });
-                const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap', maxZoom: 19
-                });
-                let fallbackUsed = false;
-                carto.on('tileerror', () => {
-                    if (!fallbackUsed) {
-                        fallbackUsed = true;
-                        quadMapInstance.removeLayer(carto);
-                        osm.addTo(quadMapInstance);
-                    }
-                });
-                carto.addTo(quadMapInstance);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom',
+                    maxZoom: 18
+                }).addTo(quadMapInstance);
             }
 
             // Leaflet deve ricalcolare le dimensioni dopo che la scheda nascosta diventa visibile.
@@ -2976,24 +3214,34 @@
                 const lat = Number(pilot.lat), lng = Number(pilot.lng);
                 if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
                 const veh = getPilotActiveVehicle(pilot);
+                const photoSrc = (veh && veh.photo) ? veh.photo : window.FALLBACK_QUAD_SVG;
                 const isMe = pilot.id === me.id;
                 const icon = L.divIcon({
                     className: '',
-                    html: `<div class="${isMe ? 'home-gps-marker' : 'custom-quad-marker'} w-9 h-9 text-xs font-black text-white">${escapeHtml((pilot.name || 'Q').slice(0, 2).toUpperCase())}</div>`,
-                    iconSize: [36, 36], iconAnchor: [18, 18]
+                    html: `<div class="${isMe ? 'home-gps-marker' : 'custom-quad-marker'} w-11 h-11 overflow-hidden p-0.5"><img src="${escapeHtml(photoSrc)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" class="w-full h-full object-cover rounded-full" alt="${escapeHtml(veh.model || pilot.name)}"></div>`,
+                    iconSize: [44, 44], iconAnchor: [22, 22]
                 });
                 L.marker([lat, lng], { icon }).addTo(quadMapInstance)
-                    .bindPopup(`<strong>${escapeHtml(pilot.name)}</strong><br>${escapeHtml(veh.model)}<br>${escapeHtml(pilot.city)}${isMe ? ' (Casa Tua)' : ` • ${dist.toFixed(1)} km`}`);
+                    .bindPopup(`<div style="min-width:165px"><img src="${escapeHtml(photoSrc)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" style="width:100%;height:78px;object-fit:cover;border-radius:8px;margin-bottom:6px;"><strong>${escapeHtml(pilot.name)}</strong><br>${escapeHtml(veh.model)}<br>${escapeHtml(pilot.city)}${isMe ? ' (Casa Tua)' : ` • ${dist.toFixed(1)} km`}</div>`);
             });
 
             const listEl = document.getElementById('map-pilots-list');
             if (listEl) {
                 listEl.innerHTML = sorted.map(({ pilot, dist }) => {
                     const veh = getPilotActiveVehicle(pilot);
+                    const photoSrc = (veh && veh.photo) ? veh.photo : window.FALLBACK_QUAD_SVG;
                     const isMe = pilot.id === me.id;
-                    return `<div class="bg-mud-950 border ${isMe ? 'border-emerald-500/40' : 'border-stone-800'} rounded-2xl p-3 flex items-center justify-between gap-2">
-                        <div class="min-w-0"><p class="text-xs font-bold text-white truncate">${escapeHtml(pilot.name)} ${isMe ? '(Tu)' : ''}</p>
-                        <p class="text-[11px] text-quad-400 truncate">${escapeHtml(veh.model)}</p><p class="text-[10px] text-stone-400 truncate">${escapeHtml(pilot.city)}</p></div>
+                    return `<div class="bg-mud-950 border ${isMe ? 'border-emerald-500/40' : 'border-stone-800'} rounded-2xl p-3 flex items-center justify-between gap-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <img src="${escapeHtml(photoSrc)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;"
+                                 class="w-12 h-12 rounded-xl object-cover border ${isMe ? 'border-emerald-500' : 'border-quad-500/70'} shrink-0 bg-mud-900"
+                                 alt="${escapeHtml(veh.model || pilot.name)}">
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-white truncate">${escapeHtml(pilot.name)} ${isMe ? '(Tu)' : ''}</p>
+                                <p class="text-[11px] text-quad-400 truncate">${escapeHtml(veh.model)}</p>
+                                <p class="text-[10px] text-stone-400 truncate">${escapeHtml(pilot.city)}</p>
+                            </div>
+                        </div>
                         <span class="px-2.5 py-1 rounded-xl ${isMe ? 'bg-emerald-500/20 text-emerald-400' : 'bg-stone-800 text-stone-200'} text-[11px] font-black shrink-0">${isMe ? 'Casa' : `${dist.toFixed(1)} km`}</span>
                     </div>`;
                 }).join('');
@@ -3009,9 +3257,62 @@
         }
 
         // ==================== MERCATINO ====================
+        let pendingListingPhotos = [];
+        let listingActivePhotoIdx = {};
+
+        function getListingStatusBadgeClass(status) {
+            if (status === 'Venduto') return 'bg-red-600 text-white';
+            if (status === 'In trattativa') return 'bg-amber-500 text-black';
+            if (status === 'Prenotato') return 'bg-sky-500 text-black';
+            return 'bg-emerald-600 text-white';
+        }
+
+        function setListingSlidePhoto(listingId, idx) {
+            listingActivePhotoIdx[listingId] = idx;
+            renderMarketplace();
+        }
+
+        function changeListingStatusQuick(listingId, newStatus) {
+            const me = getCurrentPilot();
+            const item = listings.find(l => l.id === listingId);
+            if (!me || !item) return;
+            if (item.sellerId !== me.id && !isCurrentUserAdmin()) {
+                showToast('Solo il proprietario o l’Amministratore possono cambiare lo stato.', true);
+                return;
+            }
+            item.status = newStatus;
+            saveState();
+            renderMarketplace();
+            renderDashboardData();
+            showToast(`Stato annuncio aggiornato: ${newStatus}`);
+        }
+
+        function deleteListingItem(listingId) {
+            const me = getCurrentPilot();
+            const item = listings.find(l => l.id === listingId);
+            if (!me || !item) return;
+            if (item.sellerId !== me.id && !isCurrentUserAdmin()) {
+                showToast('Solo il proprietario o l’Amministratore possono eliminare questo annuncio.', true);
+                return;
+            }
+            showConfirmModal(
+                'Elimina Annuncio',
+                `Vuoi eliminare definitivamente l'annuncio "${item.title}"?`,
+                () => {
+                    listings = listings.filter(l => l.id !== listingId);
+                    saveState();
+                    renderMarketplace();
+                    renderDashboardData();
+                    showToast('Annuncio eliminato dal mercatino.');
+                }
+            );
+        }
+
         function renderMarketplace() {
             const grid = document.getElementById('market-listings-grid');
             if (!grid) return;
+            const me = getCurrentPilot();
+            const isAdmin = isCurrentUserAdmin();
             const q = (document.getElementById('market-search-input')?.value || '').trim().toLowerCase();
             const cat = document.getElementById('market-category-filter')?.value || 'ALL';
             const st = document.getElementById('market-status-filter')?.value || 'ALL';
@@ -3019,7 +3320,7 @@
             const filtered = listings.filter(item => {
                 if (cat !== 'ALL' && item.category !== cat) return false;
                 if (st !== 'ALL' && item.status !== st) return false;
-                if (q && !`${item.title} ${item.description} ${item.sellerName}`.toLowerCase().includes(q)) return false;
+                if (q && !`${item.title} ${item.description} ${item.sellerName} ${item.city || ''}`.toLowerCase().includes(q)) return false;
                 return true;
             });
 
@@ -3029,62 +3330,254 @@
             }
 
             grid.innerHTML = filtered.map(item => {
-                const photo = (Array.isArray(item.photos) && item.photos[0]) || window.FALLBACK_QUAD_SVG;
-                const waText = encodeURIComponent(`Ciao ${item.sellerName}, ti contatto da GRUPPOQUAD per l'annuncio: ${item.title} (€ ${item.price})`);
+                const photos = (Array.isArray(item.photos) && item.photos.filter(Boolean).length)
+                    ? item.photos.filter(Boolean).slice(0, 5)
+                    : [window.FALLBACK_QUAD_SVG];
+                const curIdx = Math.min(listingActivePhotoIdx[item.id] || 0, photos.length - 1);
+                const activePhoto = photos[curIdx] || window.FALLBACK_QUAD_SVG;
+                const canManage = Boolean(me && (item.sellerId === me.id || isAdmin));
+                const waText = encodeURIComponent(`Ciao ${item.sellerName}, ti contatto da GRUPPOQUAD per l'annuncio: ${item.title} (€ ${item.price}${item.negotiable ? ' trattabili' : ''})`);
                 const waHref = `https://wa.me/${formatPhoneForWhatsApp(item.sellerPhone)}?text=${waText}`;
+
+                const thumbsHtml = photos.length > 1 ? `
+                    <div class="flex items-center gap-1.5 px-3 pt-2.5 overflow-x-auto">
+                        ${photos.map((ph, idx) => `
+                            <button type="button" onclick="setListingSlidePhoto('${escapeHtml(item.id)}', ${idx})"
+                                    class="w-11 h-9 rounded-lg overflow-hidden border-2 ${idx === curIdx ? 'border-quad-500 scale-105' : 'border-stone-700 opacity-70 hover:opacity-100'} shrink-0 transition cursor-pointer">
+                                <img src="${escapeHtml(ph)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" class="w-full h-full object-cover" alt="Foto ${idx + 1}">
+                            </button>
+                        `).join('')}
+                    </div>` : '';
+
+                const statusOptions = ['Disponibile', 'In trattativa', 'Prenotato', 'Venduto'].map(sOpt =>
+                    `<option value="${sOpt}" ${item.status === sOpt ? 'selected' : ''}>${sOpt}</option>`
+                ).join('');
+
                 return `
-                    <div class="bg-mud-900 border border-stone-800 rounded-3xl overflow-hidden flex flex-col justify-between">
+                    <div class="bg-mud-900 border ${canManage && isAdmin && item.sellerId !== me?.id ? 'border-quad-500/35' : 'border-stone-800'} rounded-3xl overflow-hidden flex flex-col justify-between">
                         <div>
-                            <div class="relative h-44 bg-black">
-                                <img src="${escapeHtml(photo)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" class="w-full h-full object-cover" alt="${escapeHtml(item.title)}">
+                            <div class="relative h-48 bg-black group">
+                                <img src="${escapeHtml(activePhoto)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;"
+                                     onclick="openRideImageLightbox('${escapeHtml(activePhoto)}', '${escapeHtml(item.title)}')"
+                                     class="w-full h-full object-cover cursor-zoom-in" alt="${escapeHtml(item.title)}">
                                 <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-mud-950/90 border border-stone-700 text-[10px] font-bold text-quad-400">${escapeHtml(item.category)}</span>
-                                <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full ${item.status === 'Venduto' ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white'} text-[10px] font-black">${escapeHtml(item.status)}</span>
+                                <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full ${getListingStatusBadgeClass(item.status)} text-[10px] font-black shadow-md">${escapeHtml(item.status)}</span>
+                                ${photos.length > 1 ? `<span class="absolute bottom-2.5 right-3 px-2 py-0.5 rounded-full bg-black/75 text-white text-[10px] font-bold">${curIdx + 1}/${photos.length} foto</span>` : ''}
                             </div>
+                            ${thumbsHtml}
                             <div class="p-4 space-y-2">
                                 <div class="flex items-start justify-between gap-2">
                                     <h3 class="text-sm font-black text-white">${escapeHtml(item.title)}</h3>
-                                    <span class="text-base font-black text-quad-400 shrink-0">€ ${Number(item.price || 0)}</span>
+                                    <div class="text-right shrink-0">
+                                        <span class="block text-base font-black text-quad-400">€ ${Number(item.price || 0)}</span>
+                                        ${item.negotiable ? '<span class="inline-block px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[9px] font-black uppercase">Prezzo trattabile</span>' : '<span class="block text-[9px] text-stone-500 font-semibold">Non trattabile</span>'}
+                                    </div>
                                 </div>
                                 <p class="text-xs text-stone-300 leading-relaxed">${escapeHtml(item.description)}</p>
                             </div>
                         </div>
-                        <div class="p-4 pt-3 border-t border-stone-800 flex items-center justify-between gap-2">
-                            <span class="text-[11px] text-stone-400 truncate"><strong class="text-stone-200">${escapeHtml(item.sellerName)}</strong> • ${escapeHtml(item.city)}</span>
-                            <a href="${waHref}" target="_blank" rel="noopener noreferrer"
-                               class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition">
-                                <i class="fa-brands fa-whatsapp"></i> Contatta
-                            </a>
+                        <div class="p-4 pt-3 border-t border-stone-800 space-y-2.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] text-stone-300 truncate"><strong class="text-white">${escapeHtml(item.sellerName)}</strong></p>
+                                    <p class="text-[10px] text-stone-400 truncate"><i class="fa-solid fa-location-dot text-quad-400 mr-1"></i>${escapeHtml(item.city || '')}</p>
+                                </div>
+                                <a href="${waHref}" target="_blank" rel="noopener noreferrer"
+                                   class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition shadow-md shadow-emerald-600/20">
+                                    <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp
+                                </a>
+                            </div>
+                            ${canManage ? `
+                                <div class="pt-2 border-t border-stone-800/80 flex flex-wrap items-center justify-between gap-2">
+                                    <select onchange="changeListingStatusQuick('${escapeHtml(item.id)}', this.value)"
+                                            aria-label="Cambia stato annuncio"
+                                            class="bg-mud-950 border border-stone-700 focus:border-quad-500 rounded-lg px-2 py-1 text-[11px] font-bold text-stone-200 focus:outline-none cursor-pointer">
+                                        ${statusOptions}
+                                    </select>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" onclick="openListingModal('${escapeHtml(item.id)}')"
+                                                class="px-2.5 py-1 rounded-lg bg-quad-500/20 hover:bg-quad-500 text-quad-300 hover:text-white text-[11px] font-bold transition cursor-pointer">
+                                            <i class="fa-solid fa-pen mr-1"></i>Modifica${isAdmin && item.sellerId !== me?.id ? ' (Admin)' : ''}
+                                        </button>
+                                        <button type="button" onclick="deleteListingItem('${escapeHtml(item.id)}')"
+                                                class="px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white text-[11px] font-bold transition cursor-pointer" title="Elimina annuncio">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function openListingModal() {
+        function renderListingPhotosPreview() {
+            const grid = document.getElementById('listing-photos-preview-grid');
+            const countEl = document.getElementById('listing-photos-count');
+            if (countEl) countEl.textContent = String(pendingListingPhotos.length);
+            if (!grid) return;
+
+            grid.innerHTML = pendingListingPhotos.map((src, idx) => `
+                <div class="relative group aspect-square rounded-xl overflow-hidden border border-stone-700 bg-black">
+                    <img src="${escapeHtml(src)}" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" class="w-full h-full object-cover" alt="Anteprima ${idx + 1}">
+                    <button type="button" onclick="removePendingListingPhoto(${idx})"
+                            class="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center shadow cursor-pointer" title="Rimuovi foto">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removePendingListingPhoto(idx) {
+            pendingListingPhotos.splice(idx, 1);
+            renderListingPhotosPreview();
+        }
+
+        function addListingPhotoFromUrl() {
+            const inp = document.getElementById('listing-photo-url-input');
+            const url = (inp?.value || '').trim();
+            if (!url) return;
+            if (pendingListingPhotos.length >= 5) {
+                showToast('Hai già raggiunto il massimo di 5 foto per annuncio.', true);
+                return;
+            }
+            pendingListingPhotos.push(url);
+            inp.value = '';
+            renderListingPhotosPreview();
+        }
+
+        function handleListingPhotosUpload(event) {
+            const files = Array.from(event?.target?.files || []);
+            if (!files.length) return;
+            const remaining = 5 - pendingListingPhotos.length;
+            if (remaining <= 0) {
+                showToast('Hai già caricato il massimo di 5 foto.', true);
+                event.target.value = '';
+                return;
+            }
+            const toProcess = files.slice(0, remaining);
+            if (files.length > remaining) {
+                showToast(`Puoi caricare al massimo 5 foto: aggiunte le prime ${remaining}.`, true);
+            }
+            toProcess.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (pendingListingPhotos.length < 5 && reader.result) {
+                        pendingListingPhotos.push(String(reader.result));
+                        renderListingPhotosPreview();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            event.target.value = '';
+        }
+
+        function openListingModal(editId = '') {
             const me = getCurrentPilot();
             if (!me) return;
-            const title = prompt('Titolo annuncio (es. Gomme Maxxis Bighorn 26"):');
-            if (!title || !title.trim()) return;
-            const price = Number(prompt('Prezzo in Euro (€):', '100')) || 0;
-            const desc = prompt('Descrizione breve del ricambio / quad:', 'Ottime condizioni, pronto al montaggio.') || '';
-            listings.unshift({
-                id: 'lst_' + Date.now(),
-                sellerId: me.id,
-                sellerName: me.name,
-                sellerPhone: me.phone,
-                title: title.trim(),
-                category: 'Quad/ATV',
-                price,
-                condition: 'Usato',
-                city: me.city,
-                status: 'Disponibile',
-                description: desc.trim(),
-                photos: [getPilotActiveVehicle(me).photo || ''],
-                createdAt: Date.now()
-            });
+            const modal = document.getElementById('listing-modal');
+            const titleEl = document.getElementById('listing-modal-title');
+            document.getElementById('listing-edit-id').value = editId || '';
+
+            if (editId) {
+                const item = listings.find(l => l.id === editId);
+                if (!item) return;
+                if (item.sellerId !== me.id && !isCurrentUserAdmin()) {
+                    showToast('Solo il proprietario o l’Amministratore possono modificare questo annuncio.', true);
+                    return;
+                }
+                if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square text-quad-500"></i> Modifica Annuncio Mercatino';
+                document.getElementById('listing-title').value = item.title || '';
+                document.getElementById('listing-category').value = item.category || 'Quad/ATV';
+                document.getElementById('listing-status').value = item.status || 'Disponibile';
+                document.getElementById('listing-price').value = Number(item.price || 0);
+                document.getElementById('listing-negotiable').checked = Boolean(item.negotiable);
+                document.getElementById('listing-phone').value = item.sellerPhone || me.phone || '';
+                document.getElementById('listing-city').value = item.city || me.city || '';
+                document.getElementById('listing-description').value = item.description || '';
+                pendingListingPhotos = Array.isArray(item.photos) ? item.photos.filter(Boolean).slice(0, 5) : [];
+            } else {
+                if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-tag text-quad-500"></i> Nuovo Annuncio Mercatino';
+                document.getElementById('listing-form')?.reset();
+                document.getElementById('listing-status').value = 'Disponibile';
+                document.getElementById('listing-negotiable').checked = false;
+                document.getElementById('listing-phone').value = me.phone || '';
+                document.getElementById('listing-city').value = me.city || '';
+                pendingListingPhotos = [];
+            }
+
+            renderListingPhotosPreview();
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function handleSaveListing(event) {
+            event.preventDefault();
+            const me = getCurrentPilot();
+            if (!me) return;
+
+            const editId = document.getElementById('listing-edit-id').value.trim();
+            const title = document.getElementById('listing-title').value.trim();
+            const category = document.getElementById('listing-category').value;
+            const status = document.getElementById('listing-status').value;
+            const price = Math.max(0, Number(document.getElementById('listing-price').value) || 0);
+            const negotiable = Boolean(document.getElementById('listing-negotiable').checked);
+            const sellerPhone = document.getElementById('listing-phone').value.trim() || me.phone;
+            const city = document.getElementById('listing-city').value.trim() || me.city;
+            const description = document.getElementById('listing-description').value.trim();
+            const photos = pendingListingPhotos.slice(0, 5);
+
+            if (!title || !description) {
+                showToast('Compila titolo e descrizione dell’annuncio.', true);
+                return;
+            }
+
+            if (editId) {
+                const idx = listings.findIndex(l => l.id === editId);
+                if (idx < 0) return;
+                if (listings[idx].sellerId !== me.id && !isCurrentUserAdmin()) {
+                    showToast('Non autorizzato alla modifica.', true);
+                    return;
+                }
+                listings[idx] = {
+                    ...listings[idx],
+                    title,
+                    category,
+                    status,
+                    price,
+                    negotiable,
+                    sellerPhone,
+                    city,
+                    description,
+                    photos,
+                    updatedAt: Date.now()
+                };
+                showToast('Annuncio aggiornato!');
+            } else {
+                listings.unshift({
+                    id: 'lst_' + Date.now(),
+                    sellerId: me.id,
+                    sellerName: me.name,
+                    sellerPhone,
+                    title,
+                    category,
+                    price,
+                    negotiable,
+                    condition: 'Usato',
+                    city,
+                    status,
+                    description,
+                    photos,
+                    createdAt: Date.now()
+                });
+                showToast('Nuovo annuncio pubblicato nel mercatino!');
+            }
+
             saveState();
+            closeListingModal();
             renderMarketplace();
-            showToast('Annuncio pubblicato nel mercatino!');
+            renderDashboardData();
         }
 
         // ==================== USCITE & RADUNI ====================
@@ -3246,6 +3739,19 @@
             renderRidesList();
         }
 
+        function deleteRideItem(rideId) {
+            const me = getCurrentPilot();
+            const r = rides.find(item => item.id === rideId);
+            if (!me || !r) return;
+            if (r.creatorId !== me.id && !isCurrentUserAdmin()) return;
+            showConfirmModal('Elimina Uscita', `Vuoi eliminare l'uscita "${r.title}"?`, () => {
+                rides = rides.filter(item => item.id !== rideId);
+                saveState();
+                renderRidesList();
+                showToast('Uscita eliminata.');
+            });
+        }
+
         function renderRidesList() {
             const container = document.getElementById('rides-list-container');
             const me = getCurrentPilot();
@@ -3268,12 +3774,19 @@
                             ${r.attachment?.data && r.attachment.type?.startsWith('image/') ? `<button type="button" class="block w-full text-left" onclick="openRideImageLightbox('${r.attachment.data}')"><img src="${r.attachment.data}" alt="Locandina ${escapeHtml(r.title)}" class="w-full max-h-56 object-contain rounded-xl border border-stone-700 bg-black"><span class="block text-[10px] text-emerald-400 mt-1">Apri anteprima</span></button>` : ''}
                             ${r.attachment?.data && r.attachment.type === 'application/pdf' ? `<a href="${r.attachment.data}" download="${escapeHtml(r.attachment.name || 'programma.pdf')}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2"><i class="fa-solid fa-file-pdf"></i>${escapeHtml(r.attachment.name || 'Apri PDF')}</a>` : ''}
                         </div>
-                        <div class="pt-3 border-t border-stone-800 flex items-center justify-between gap-2">
+                        <div class="pt-3 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2">
                             <span class="text-[11px] text-stone-400">Org: <strong class="text-stone-200">${escapeHtml(r.creatorName)}</strong></span>
-                            <button type="button" onclick="toggleRideParticipation('${escapeHtml(r.id)}')"
-                                    class="px-4 py-2 rounded-xl ${joined ? 'bg-emerald-600 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold transition cursor-pointer">
-                                ${joined ? '<i class="fa-solid fa-check mr-1"></i>Partecipo' : 'Partecipa al Giro'}
-                            </button>
+                            <div class="flex items-center gap-1.5">
+                                ${(me && (r.creatorId === me.id || isCurrentUserAdmin())) ? `
+                                    <button type="button" onclick="deleteRideItem('${escapeHtml(r.id)}')"
+                                            class="px-2.5 py-2 rounded-xl bg-red-500/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-bold transition cursor-pointer" title="Elimina uscita">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>` : ''}
+                                <button type="button" onclick="toggleRideParticipation('${escapeHtml(r.id)}')"
+                                        class="px-4 py-2 rounded-xl ${joined ? 'bg-emerald-600 text-white' : 'bg-quad-600 hover:bg-quad-500 text-white'} text-xs font-bold transition cursor-pointer">
+                                    ${joined ? '<i class="fa-solid fa-check mr-1"></i>Partecipo' : 'Partecipa al Giro'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -3281,18 +3794,53 @@
         }
 
         // ==================== RADIO SQUADRA (CHAT) ====================
+        function deleteChatMessage(msgId) {
+            const me = getCurrentPilot();
+            const msg = chatMessages.find(m => m.id === msgId);
+            if (!me || !msg) return;
+            if (!isCurrentUserAdmin() && msg.senderId !== me.id) {
+                showToast('Solo l’Amministratore può cancellare i messaggi del gruppo radio.', true);
+                return;
+            }
+            showConfirmModal(
+                'Cancella Messaggio Radio',
+                `Vuoi cancellare questo messaggio di ${msg.senderName}?`,
+                () => {
+                    chatMessages = chatMessages.filter(m => m.id !== msgId);
+                    saveState();
+                    renderChatMessages();
+                    showToast('Messaggio radio eliminato.');
+                }
+            );
+        }
+
         function renderChatMessages() {
             const box = document.getElementById('chat-messages-box');
             const me = getCurrentPilot();
+            const isAdmin = isCurrentUserAdmin();
             if (me) document.getElementById('chat-sender-badge').textContent = me.name;
             if (!box) return;
 
+            if (!chatMessages.length) {
+                box.innerHTML = `<div class="text-center py-8 text-xs text-stone-500">Nessun messaggio nella Radio Squadra.</div>`;
+                return;
+            }
+
             box.innerHTML = chatMessages.map(m => {
                 const isMine = me && m.senderId === me.id;
+                const canDelete = Boolean(isAdmin || isMine);
                 const timeStr = new Date(m.timestamp || Date.now()).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
                 return `
                     <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'}">
-                        <span class="text-[10px] text-stone-400 mb-1 px-1">${escapeHtml(m.senderName)} &bull; ${timeStr}</span>
+                        <div class="flex items-center gap-2 mb-1 px-1">
+                            <span class="text-[10px] text-stone-400">${escapeHtml(m.senderName)} &bull; ${timeStr}</span>
+                            ${canDelete ? `
+                                <button type="button" onclick="deleteChatMessage('${escapeHtml(m.id)}')"
+                                        class="text-[10px] text-red-400 hover:text-red-300 transition cursor-pointer"
+                                        title="${isAdmin && !isMine ? 'Cancella messaggio (Admin)' : 'Cancella messaggio'}">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>` : ''}
+                        </div>
                         <div class="max-w-[82%] px-4 py-2.5 rounded-2xl text-xs sm:text-sm ${
                             isMine
                                 ? 'bg-quad-600 text-white rounded-br-sm'
@@ -3375,6 +3923,7 @@
             if (adminPanel) {
                 adminPanel.classList.toggle('hidden', !me.isAdmin);
                 if (me.isAdmin) {
+                    renderAdminPinRequests();
                     const adminList = document.getElementById('admin-pilots-list');
                     adminList.innerHTML = pilots.map(p => `
                         <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
@@ -3529,8 +4078,9 @@
 
             if (!homeMapInstance) {
                 homeMapInstance = L.map('profile-home-map').setView([lat, lng], 12);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap'
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles &copy; Esri',
+                    maxZoom: 18
                 }).addTo(homeMapInstance);
                 homeMarkerInstance = L.marker([lat, lng]).addTo(homeMapInstance);
             } else {
@@ -3653,8 +4203,8 @@
                     submitBtn.className = 'px-5 py-2.5 rounded-xl bg-gradient-to-r from-quad-600 to-quad-500 hover:from-quad-500 hover:to-amber-500 text-white text-xs font-black shadow-lg shadow-quad-600/25 flex items-center justify-center gap-1.5 cursor-pointer';
                     submitBtn.innerHTML = '<i class="fa-solid fa-key text-xs"></i> Salva Nuovo PIN Admin';
                 } else {
-                    submitBtn.className = 'px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer';
-                    submitBtn.innerHTML = '<i class="fa-brands fa-whatsapp text-sm"></i> Contatta Admin su WhatsApp';
+                    submitBtn.className = 'px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-quad-600 hover:from-amber-500 hover:to-quad-500 text-white text-xs font-bold shadow-lg shadow-amber-600/20 flex items-center justify-center gap-1.5 cursor-pointer';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-envelope text-sm"></i> Invia Richiesta via Email & Cloud';
                 }
             }
         }
@@ -3665,21 +4215,140 @@
             modal.classList.remove('flex');
         }
 
-        // Il vecchio codice master era incorporato nel JavaScript pubblico: non era un segreto.
-        // Il reset dell'account amministratore va eseguito tramite un backend di autenticazione.
-        function handleRecoverPinSubmit(event) {
+        async function handleRecoverPinSubmit(event) {
             event.preventDefault();
             const email = (document.getElementById('recover-pin-email')?.value || '').trim().toLowerCase();
+            const note = (document.getElementById('recover-pin-note')?.value || '').trim();
             const pilot = pilots.find(p => (p.email || '').toLowerCase() === email);
             const isAdminAccount = Boolean(pilot && (pilot.isAdmin || email === 'tecchionicola@gmail.com'));
+
             if (isAdminAccount) {
-                showToast('Reset Admin non disponibile da questa schermata: va configurato Firebase Authentication lato server.', true);
+                const verifyVal = (document.getElementById('admin-verify-master-key')?.value || '').trim();
+                const newPin = (document.getElementById('admin-self-new-pin')?.value || '').trim();
+                const adminPhoneDigits = String(pilot.phone || '2369').replace(/\D/g, '');
+                const expectedLast4 = adminPhoneDigits.slice(-4);
+                if (!verifyVal || verifyVal !== expectedLast4) {
+                    showToast('Verifica Amministratore non valida (inserisci le ultime 4 cifre del cellulare Admin).', true);
+                    return;
+                }
+                if (newPin.length < 4) {
+                    showToast('Il nuovo PIN deve contenere almeno 4 caratteri.', true);
+                    return;
+                }
+                pilot.pin = newPin;
+                saveState(true);
+                closeRecoverPinModal();
+                showToast('Nuovo PIN Amministratore salvato su Cloud Live!');
                 return;
             }
-            const msg = encodeURIComponent(`Ciao Nicola (Admin GRUPPOQUAD), ti chiedo il ripristino della password/PIN per il mio account: ${email}`);
-            window.open(`https://wa.me/393497802369?text=${msg}`, '_blank', 'noopener');
+
+            if (!pilot) {
+                showToast('Email non trovata tra i piloti registrati nel gruppo.', true);
+                return;
+            }
+
+            // Registra la richiesta di recupero PIN/Password su Cloud Live (scaricabile solo dall'Amministratore)
+            const reqObj = {
+                id: 'req_pin_' + Date.now(),
+                pilotId: pilot.id,
+                pilotName: pilot.name,
+                email: pilot.email,
+                note: note || 'Richiesta recupero PIN / Password via email',
+                status: 'In attesa',
+                createdAt: Date.now()
+            };
+            pinRecoveryRequests.unshift(reqObj);
+            saveState(true);
+
+            // Apre il client email predefinito verso l'Amministratore per l'invio immediato via email
+            const subject = encodeURIComponent(`GRUPPOQUAD - Recupero PIN/Password per ${pilot.name}`);
+            const body = encodeURIComponent(
+                `Ciao Nicola (Amministratore GRUPPOQUAD),\n\n` +
+                `richiedo il recupero/ripristino del PIN o Password per il mio account pilota:\n` +
+                `- Pilota: ${pilot.name}\n` +
+                `- Email: ${pilot.email}\n` +
+                (note ? `- Note: ${note}\n` : '') +
+                `\nLa richiesta è stata registrata su Cloud Live (ID: ${reqObj.id}).\nGrazie!`
+            );
+            window.location.href = `mailto:tecchionicola@gmail.com?subject=${subject}&body=${body}`;
+
             closeRecoverPinModal();
-            showToast('Richiesta pronta su WhatsApp verso l’Amministratore!');
+            showToast('Richiesta registrata su Cloud Live e pronta per l’invio via Email!');
+        }
+
+        function renderAdminPinRequests() {
+            const box = document.getElementById('admin-pin-requests-list');
+            if (!box || !isCurrentUserAdmin()) return;
+
+            if (!pinRecoveryRequests.length) {
+                box.innerHTML = '<p class="text-[11px] text-stone-400 italic">Nessuna richiesta di recupero PIN/Password presente su Cloud Live.</p>';
+                return;
+            }
+
+            box.innerHTML = pinRecoveryRequests.map(req => {
+                const dateStr = new Date(req.createdAt || Date.now()).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+                const isDone = req.status === 'Evasa';
+                return `
+                    <div class="bg-mud-900 border ${isDone ? 'border-stone-800 opacity-75' : 'border-amber-500/40'} rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-white">${escapeHtml(req.pilotName)}</span>
+                                <span class="text-[10px] text-quad-400">${escapeHtml(req.email)}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black ${isDone ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'}">${escapeHtml(req.status || 'In attesa')}</span>
+                            </div>
+                            <p class="text-[11px] text-stone-400 mt-0.5">${escapeHtml(req.note || '')} &bull; ${dateStr}</p>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="adminResetAndEmailPilotPin('${escapeHtml(req.id)}')"
+                                    class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-black flex items-center gap-1 transition cursor-pointer">
+                                <i class="fa-solid fa-paper-plane"></i> Genera PIN & Invia Email
+                            </button>
+                            <button type="button" onclick="deletePinRecoveryRequest('${escapeHtml(req.id)}')"
+                                    class="px-2.5 py-1.5 rounded-lg bg-stone-800 hover:bg-red-600 text-stone-300 hover:text-white text-[11px] font-bold transition cursor-pointer" title="Rimuovi richiesta">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function adminResetAndEmailPilotPin(reqId) {
+            if (!isCurrentUserAdmin()) {
+                showToast('Solo l’Amministratore può eseguire questa operazione.', true);
+                return;
+            }
+            const req = pinRecoveryRequests.find(r => r.id === reqId);
+            if (!req) return;
+            const pilot = pilots.find(p => p.id === req.pilotId || (p.email || '').toLowerCase() === (req.email || '').toLowerCase());
+            if (!pilot) {
+                showToast('Pilota non trovato nel database.', true);
+                return;
+            }
+            const newPin = String(Math.floor(1000 + Math.random() * 9000));
+            pilot.pin = newPin;
+            req.status = 'Evasa';
+            saveState(true);
+            renderAdminPinRequests();
+
+            const subject = encodeURIComponent('GRUPPOQUAD - Il tuo nuovo PIN di accesso');
+            const body = encodeURIComponent(
+                `Ciao ${pilot.name},\n\n` +
+                `ecco il tuo nuovo PIN personale per accedere a GRUPPOQUAD:\n\n` +
+                `Email: ${pilot.email}\n` +
+                `Nuovo PIN: ${newPin}\n\n` +
+                `Una volta entrato potrai modificarlo in qualsiasi momento nella sezione "Profilo & GPS".\n` +
+                `A presto in sella!\nNicola - Admin GRUPPOQUAD`
+            );
+            window.location.href = `mailto:${encodeURIComponent(pilot.email)}?subject=${subject}&body=${body}`;
+            showToast(`Nuovo PIN (${newPin}) salvato su Cloud Live e pronto per l’invio via email a ${pilot.name}!`);
+        }
+
+        function deletePinRecoveryRequest(reqId) {
+            if (!isCurrentUserAdmin()) return;
+            pinRecoveryRequests = pinRecoveryRequests.filter(r => r.id !== reqId);
+            saveState(true);
+            renderAdminPinRequests();
         }
 
         function openAdminEditPilotModal(pilotId) {
@@ -3821,15 +4490,25 @@
         }
 
         function openCloudSyncModal() {
+            if (!isCurrentUserAdmin()) {
+                showToast('Cloud Live attivo in invio automatico. Lo scaricamento completo è riservato esclusivamente all’Amministratore.', true);
+                return;
+            }
             showConfirmModal(
-                'Sincronizzazione Cloud Live',
-                `Stato attuale: ${cloudSyncStatus}. Vuoi scaricare subito tutti i piloti e i dati aggiornati dal database Cloud?`,
-                () => pullStateFromCloud(true)
+                'Cloud Live (Area Amministratore)',
+                `Stato attuale: ${cloudSyncStatus}. Vuoi scaricare subito tutti i dati, piloti e richieste recupero PIN dal database Cloud Live?`,
+                () => downloadCloudLiveForAdmin()
             );
         }
 
         function closeCloudSyncModal() {}
-        function closeListingModal() {}
+        function closeListingModal() {
+            const modal = document.getElementById('listing-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
         function closeProposeVideoModal() {}
         function closeSocialLinksModal() {}
         function closeRideImageLightbox() {
@@ -3838,6 +4517,78 @@
                 lb.classList.add('hidden');
                 lb.classList.remove('flex');
             }
+        }
+
+        // ==================== INSTALLAZIONE PWA (PULSANTE INSTALLA) ====================
+        let deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            updateInstallButtonsUI(false);
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredInstallPrompt = null;
+            updateInstallButtonsUI(true);
+            showToast('GRUPPOQUAD installata con successo sul dispositivo!');
+        });
+
+        function updateInstallButtonsUI(installed) {
+            const isStandalone = isStandalonePwa() || installed;
+            ['login-install-app-btn', 'header-install-app-btn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                if (isStandalone) {
+                    btn.classList.add('hidden');
+                } else {
+                    btn.classList.remove('hidden');
+                }
+            });
+        }
+
+        async function triggerPwaInstall() {
+            if (isStandalonePwa()) {
+                showToast('L’app GRUPPOQUAD è già installata e aperta!');
+                return;
+            }
+            if (deferredInstallPrompt) {
+                try {
+                    deferredInstallPrompt.prompt();
+                    const choiceResult = await deferredInstallPrompt.userChoice;
+                    if (choiceResult && choiceResult.outcome === 'accepted') {
+                        showToast('Installazione avviata...');
+                    }
+                    deferredInstallPrompt = null;
+                } catch (err) {
+                    openInstallGuideModal();
+                }
+            } else {
+                openInstallGuideModal();
+            }
+        }
+
+        function openInstallGuideModal() {
+            const modal = document.getElementById('pwa-install-guide-modal');
+            if (!modal) return;
+            const iosBox = document.getElementById('install-guide-ios');
+            const androidBox = document.getElementById('install-guide-android');
+            if (isIosBrowser()) {
+                iosBox?.classList.remove('hidden');
+                androidBox?.classList.add('hidden');
+            } else {
+                iosBox?.classList.add('hidden');
+                androidBox?.classList.remove('hidden');
+            }
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeInstallGuideModal() {
+            const modal = document.getElementById('pwa-install-guide-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         function closePushBanner() {
@@ -3883,7 +4634,8 @@
             'new-pilot-modal': () => closeNewPilotModal(),
             'vehicle-modal': () => closeVehicleModal(),
             'listing-modal': () => closeListingModal(),
-            'cloud-sync-modal': () => closeCloudSyncModal()
+            'cloud-sync-modal': () => closeCloudSyncModal(),
+            'pwa-install-guide-modal': () => closeInstallGuideModal()
         };
 
         const MODAL_Z_ORDER = [
@@ -3900,7 +4652,8 @@
             'new-pilot-modal',
             'vehicle-modal',
             'listing-modal',
-            'cloud-sync-modal'
+            'cloud-sync-modal',
+            'pwa-install-guide-modal'
         ];
 
         document.addEventListener('keydown', (e) => {
@@ -4015,8 +4768,8 @@
                 enterAppShell();
             }
 
-            // Scarica prima i dati reali dal Cloud senza mai sovrascrivere all'apertura
-            await pullStateFromCloud(false);
+            // Sincronizzazione iniziale interna protetta; lo scaricamento manuale/completo resta riservato all'Admin
+            await pullStateFromCloud(false, true);
             if (currentPilotId && getCurrentPilot()) {
                 refreshAllViews();
             }
