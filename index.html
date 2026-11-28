@@ -469,6 +469,16 @@
             <form id="listing-form" onsubmit="handleSaveListing(event)" class="space-y-3.5">
                 <input type="hidden" id="listing-edit-id" value="">
 
+                <div id="listing-admin-owner-box" class="hidden bg-amber-500/10 border border-amber-500/35 rounded-2xl p-3 space-y-1.5">
+                    <label for="listing-owner-select" class="block text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield"></i> Proprietario Annuncio (Admin) *
+                    </label>
+                    <select id="listing-owner-select" onchange="handleListingOwnerChange()"
+                            class="w-full bg-mud-800 border border-amber-500/40 focus:border-amber-400 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none">
+                    </select>
+                    <p class="text-[10px] text-stone-400">Cambiando proprietario puoi trasferire l'annuncio a un altro pilota e aggiornare automaticamente WhatsApp e località.</p>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-stone-300 mb-1">Titolo Annuncio *</label>
                     <input type="text" id="listing-title" required maxlength="90" placeholder="Es. Scarico completo Polaris / Gomme Maxxis 26"
@@ -2427,6 +2437,7 @@
         let pendingRideAttachment = null;
         let cloudPushQueue = Promise.resolve();
         let deletedPilotIds = [];
+        let deletedRecordIds = [];
 
         // ==================== FUNZIONI UTILITÀ ====================
         function escapeHtml(str) {
@@ -2549,7 +2560,8 @@
             }
 
             try {
-                listings = JSON.parse(localStorage.getItem(STORAGE_KEYS.LISTINGS)) || JSON.parse(JSON.stringify(DEFAULT_LISTINGS));
+                const rawListings = localStorage.getItem(STORAGE_KEYS.LISTINGS);
+                listings = rawListings ? JSON.parse(rawListings) : JSON.parse(JSON.stringify(DEFAULT_LISTINGS));
                 rides = JSON.parse(localStorage.getItem(STORAGE_KEYS.RIDES)) || JSON.parse(JSON.stringify(DEFAULT_RIDES));
                 chatMessages = JSON.parse(localStorage.getItem(STORAGE_KEYS.CHAT)) || JSON.parse(JSON.stringify(DEFAULT_CHAT));
                 socialLinks = JSON.parse(localStorage.getItem(STORAGE_KEYS.SOCIALS)) || JSON.parse(JSON.stringify(DEFAULT_SOCIAL_LINKS));
@@ -2560,6 +2572,8 @@
                 currentPilotId = null; // All'avvio/installazione mostra sempre la schermata iniziale di login
                 deletedPilotIds = JSON.parse(localStorage.getItem('gq_deleted_pilot_ids_v1') || '[]');
                 if (!Array.isArray(deletedPilotIds)) deletedPilotIds = [];
+                deletedRecordIds = JSON.parse(localStorage.getItem('gq_deleted_record_ids_v1') || '[]');
+                if (!Array.isArray(deletedRecordIds)) deletedRecordIds = [];
             } catch (e) {
                 listings = JSON.parse(JSON.stringify(DEFAULT_LISTINGS));
                 rides = JSON.parse(JSON.stringify(DEFAULT_RIDES));
@@ -2581,6 +2595,7 @@
                 localStorage.setItem('gq_pin_recovery_reqs_v1', JSON.stringify(pinRecoveryRequests));
                 localStorage.setItem(STORAGE_KEYS.QOTW, JSON.stringify(qotwState));
                 localStorage.setItem('gq_deleted_pilot_ids_v1', JSON.stringify(deletedPilotIds));
+                localStorage.setItem('gq_deleted_record_ids_v1', JSON.stringify(deletedRecordIds));
                 if (currentPilotId) localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
                 else localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
             } catch (e) {
@@ -2612,15 +2627,27 @@
                 if (data && typeof data === 'object') {
                     // Unisci per ID: un dispositivo con dati meno recenti non elimina record cloud.
                     deletedPilotIds = Array.from(new Set([...(Array.isArray(data.deletedPilotIds) ? data.deletedPilotIds : []), ...deletedPilotIds]));
+                    deletedRecordIds = Array.from(new Set([...(Array.isArray(data.deletedRecordIds) ? data.deletedRecordIds : []), ...deletedRecordIds]));
                     pilots = mergeRecordsById(data.pilots, pilots).filter(p => !deletedPilotIds.includes(String(p.id)));
-                    listings = mergeRecordsById(data.listings, listings);
-                    rides = mergeRecordsById(data.rides, rides);
-                    chatMessages = mergeRecordsById(data.chatMessages, chatMessages).slice(-500);
+                    listings = mergeRecordsById(data.listings, listings).filter(item => !deletedRecordIds.includes(String(item.id)));
+                    rides = mergeRecordsById(data.rides, rides).filter(item => !deletedRecordIds.includes(String(item.id)));
+                    chatMessages = mergeRecordsById(data.chatMessages, chatMessages).filter(item => !deletedRecordIds.includes(String(item.id))).slice(-500);
                     socialLinks = mergeRecordsById(data.socialLinks, socialLinks);
-                    proposedVideos = mergeRecordsById(data.proposedVideos, proposedVideos);
-                    pinRecoveryRequests = mergeRecordsById(data.pinRecoveryRequests, pinRecoveryRequests);
+                    proposedVideos = mergeRecordsById(data.proposedVideos, proposedVideos).filter(item => !deletedRecordIds.includes(String(item.id)));
+                    pinRecoveryRequests = mergeRecordsById(data.pinRecoveryRequests, pinRecoveryRequests).filter(item => !deletedRecordIds.includes(String(item.id)));
                     if (data.qotwState && typeof data.qotwState === 'object') {
-                        qotwState = { ...qotwState, ...data.qotwState, likes: { ...(qotwState.likes || {}), ...(data.qotwState.likes || {}) } };
+                        const remoteQ = data.qotwState;
+                        const localQ = qotwState || {};
+                        const useRemoteQ = (Number(remoteQ.updatedAt) || 0) >= (Number(localQ.updatedAt) || 0);
+                        const baseQ = useRemoteQ ? remoteQ : localQ;
+                        const otherQ = useRemoteQ ? localQ : remoteQ;
+                        qotwState = {
+                            ...otherQ,
+                            ...baseQ,
+                            likes: baseQ.weekKey === otherQ.weekKey
+                                ? { ...(otherQ.likes || {}), ...(baseQ.likes || {}) }
+                                : { ...(baseQ.likes || {}) }
+                        };
                     }
                     const admin = pilots.find(p => (p.email || '').toLowerCase() === 'tecchionicola@gmail.com');
                     if (admin) admin.isAdmin = true;
@@ -2690,27 +2717,42 @@
 
                     // Recupera record eventualmente assenti sul dispositivo prima di inviare modifiche.
                     const mergedDeletedPilotIds = Array.from(new Set([...(Array.isArray(remote.deletedPilotIds) ? remote.deletedPilotIds : []), ...deletedPilotIds]));
+                    const mergedDeletedRecordIds = Array.from(new Set([...(Array.isArray(remote.deletedRecordIds) ? remote.deletedRecordIds : []), ...deletedRecordIds]));
                     const mergedPilots = mergeRecordsById(remote.pilots, pilots).filter(p => !mergedDeletedPilotIds.includes(String(p.id)));
-                    const mergedListings = mergeRecordsById(remote.listings, listings);
-                    const mergedRides = mergeRecordsById(remote.rides, rides);
-                    const mergedChat = mergeRecordsById(remote.chatMessages, chatMessages).slice(-500);
+                    const mergedListings = mergeRecordsById(remote.listings, listings).filter(item => !mergedDeletedRecordIds.includes(String(item.id)));
+                    const mergedRides = mergeRecordsById(remote.rides, rides).filter(item => !mergedDeletedRecordIds.includes(String(item.id)));
+                    const mergedChat = mergeRecordsById(remote.chatMessages, chatMessages).filter(item => !mergedDeletedRecordIds.includes(String(item.id))).slice(-500);
                     const mergedSocials = mergeRecordsById(remote.socialLinks, socialLinks);
-                    const mergedVideos = mergeRecordsById(remote.proposedVideos, proposedVideos);
-                    const mergedPinReqs = mergeRecordsById(remote.pinRecoveryRequests, pinRecoveryRequests);
+                    const mergedVideos = mergeRecordsById(remote.proposedVideos, proposedVideos).filter(item => !mergedDeletedRecordIds.includes(String(item.id)));
+                    const mergedPinReqs = mergeRecordsById(remote.pinRecoveryRequests, pinRecoveryRequests).filter(item => !mergedDeletedRecordIds.includes(String(item.id)));
                     if (mergedPilots.length < (Array.isArray(remote.pilots) ? remote.pilots.length : 0)) {
                         throw new Error('Protezione attiva: il numero di piloti risulterebbe ridotto. Nessun dato inviato.');
                     }
 
+                    const remoteQ = remote.qotwState || {};
+                    const localQ = qotwState || {};
+                    const useLocalQ = (Number(localQ.updatedAt) || 0) >= (Number(remoteQ.updatedAt) || 0);
+                    const baseQ = useLocalQ ? localQ : remoteQ;
+                    const otherQ = useLocalQ ? remoteQ : localQ;
+                    const mergedQotw = {
+                        ...otherQ,
+                        ...baseQ,
+                        likes: baseQ.weekKey === otherQ.weekKey
+                            ? { ...(otherQ.likes || {}), ...(baseQ.likes || {}) }
+                            : { ...(baseQ.likes || {}) }
+                    };
+
                     const payload = {
                         pilots: mergedPilots,
                         deletedPilotIds: mergedDeletedPilotIds,
+                        deletedRecordIds: mergedDeletedRecordIds,
                         listings: mergedListings,
                         rides: mergedRides,
                         chatMessages: mergedChat,
                         socialLinks: mergedSocials,
                         proposedVideos: mergedVideos,
                         pinRecoveryRequests: mergedPinReqs,
-                        qotwState: { ...(remote.qotwState || {}), ...(qotwState || {}) },
+                        qotwState: mergedQotw,
                         updatedAt: Date.now()
                     };
                     const resp = await fetch(`${baseUrl}/${CLOUD_NODE}.json`, {
@@ -2722,12 +2764,14 @@
 
                     pilots = mergedPilots;
                     deletedPilotIds = mergedDeletedPilotIds;
+                    deletedRecordIds = mergedDeletedRecordIds;
                     listings = mergedListings;
                     rides = mergedRides;
                     chatMessages = mergedChat;
                     socialLinks = mergedSocials;
                     proposedVideos = mergedVideos;
                     pinRecoveryRequests = mergedPinReqs;
+                    qotwState = mergedQotw;
                     saveState(false);
                     lastCloudSyncAt = new Date();
                     updateCloudIndicator('Cloud Live', 'bg-emerald-400');
@@ -2903,26 +2947,33 @@
             return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
         }
 
+        function getDeterministicWeeklyPilot(weekKey) {
+            const ordered = [...pilots].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+            if (!ordered.length) return null;
+            let hash = 0;
+            for (let i = 0; i < weekKey.length; i++) {
+                hash = ((hash * 31) + weekKey.charCodeAt(i)) >>> 0;
+            }
+            return ordered[hash % ordered.length];
+        }
+
         function ensureWeeklyQuadSelection() {
             if (!pilots.length) return null;
             const weekKey = getCurrentIsoWeekKey();
-            let chosen = pilots.find(p => p.id === qotwState.pilotId);
+            let chosen = (qotwState.weekKey === weekKey) ? pilots.find(p => p.id === qotwState.pilotId) : null;
 
-            if (!chosen || qotwState.weekKey !== weekKey) {
+            if (!chosen) {
+                chosen = getDeterministicWeeklyPilot(weekKey) || pilots[0];
                 const used = Array.isArray(qotwState.history) ? qotwState.history : [];
-                let candidates = pilots.filter(p => !used.includes(p.id));
-                if (candidates.length === 0) {
-                    qotwState.history = [];
-                    candidates = [...pilots];
+                if (!used.includes(chosen.id)) {
+                    used.push(chosen.id);
                 }
-                chosen = candidates[Math.floor(Math.random() * candidates.length)];
                 qotwState.weekKey = weekKey;
                 qotwState.pilotId = chosen.id;
-                if (!qotwState.history.includes(chosen.id)) {
-                    qotwState.history.push(chosen.id);
-                }
+                qotwState.history = used;
                 qotwState.likes = {};
-                saveState();
+                qotwState.updatedAt = Date.now();
+                saveState(false);
             }
             return chosen;
         }
@@ -2999,6 +3050,7 @@
             } else {
                 qotwState.likes[me.id] = true;
             }
+            qotwState.updatedAt = Date.now();
             saveState();
             updateQotwLikeUI();
         }
@@ -3491,6 +3543,7 @@
                 'Elimina Annuncio',
                 `Vuoi eliminare definitivamente l'annuncio "${item.title}"?`,
                 () => {
+                    deletedRecordIds = Array.from(new Set([...deletedRecordIds, String(listingId)]));
                     listings = listings.filter(l => l.id !== listingId);
                     saveState();
                     renderMarketplace();
@@ -3528,7 +3581,8 @@
                 const curIdx = Math.min(listingActivePhotoIdx[item.id] || 0, photos.length - 1);
                 const activePhoto = photos[curIdx] || window.FALLBACK_QUAD_SVG;
                 const canManage = Boolean(me && (item.sellerId === me.id || isAdmin));
-                const waText = encodeURIComponent(`Ciao ${item.sellerName}, ti contatto da GRUPPOQUAD per l'annuncio: ${item.title} (€ ${item.price}${item.negotiable ? ' trattabili' : ''})`);
+                const sellerDisplay = (pilots.find(p => p.id === item.sellerId)?.name) || item.sellerName || 'Pilota';
+                const waText = encodeURIComponent(`Ciao ${sellerDisplay}, ti contatto da GRUPPOQUAD per l'annuncio: ${item.title} (€ ${item.price}${item.negotiable ? ' trattabili' : ''})`);
                 const waHref = `https://wa.me/${formatPhoneForWhatsApp(item.sellerPhone)}?text=${waText}`;
 
                 const thumbsHtml = photos.length > 1 ? `
@@ -3571,8 +3625,17 @@
                         <div class="p-4 pt-3 border-t border-stone-800 space-y-2.5">
                             <div class="flex items-center justify-between gap-2">
                                 <div class="min-w-0">
-                                    <p class="text-[11px] text-stone-300 truncate"><strong class="text-white">${escapeHtml(item.sellerName)}</strong></p>
-                                    <p class="text-[10px] text-stone-400 truncate"><i class="fa-solid fa-location-dot text-quad-400 mr-1"></i>${escapeHtml(item.city || '')}</p>
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-quad-500/15 border border-quad-500/30 text-[11px] text-quad-300 max-w-full flex-wrap">
+                                        <span class="inline-flex items-center gap-1 min-w-0">
+                                            <i class="fa-solid fa-user text-quad-400 text-[10px] shrink-0"></i>
+                                            <span class="truncate">Proprietario: <strong class="text-white">${escapeHtml(sellerDisplay)}</strong></span>
+                                        </span>
+                                        <span class="text-stone-500">•</span>
+                                        <span class="inline-flex items-center gap-1 text-stone-200 truncate">
+                                            <i class="fa-solid fa-location-dot text-quad-400 text-[10px] shrink-0"></i>
+                                            <span class="truncate">${escapeHtml(item.city || (pilots.find(p => p.id === item.sellerId)?.city) || 'Località non specificata')}</span>
+                                        </span>
+                                    </div>
                                 </div>
                                 <a href="${waHref}" target="_blank" rel="noopener noreferrer"
                                    class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 transition shadow-md shadow-emerald-600/20">
@@ -3665,6 +3728,38 @@
             event.target.value = '';
         }
 
+        function populateListingOwnerSelect(selectedSellerId, fallbackSellerName = '') {
+            const box = document.getElementById('listing-admin-owner-box');
+            const sel = document.getElementById('listing-owner-select');
+            const isAdmin = isCurrentUserAdmin();
+            if (!box || !sel) return;
+
+            box.classList.toggle('hidden', !isAdmin);
+            if (!isAdmin) return;
+
+            const sortedPilots = [...pilots].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+            let optionsHtml = sortedPilots.map(p => {
+                const label = `${p.name || p.email}${p.city ? ' — ' + p.city : ''}`;
+                return `<option value="${escapeHtml(p.id)}" ${p.id === selectedSellerId ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+            }).join('');
+
+            if (selectedSellerId && !sortedPilots.some(p => p.id === selectedSellerId)) {
+                optionsHtml = `<option value="${escapeHtml(selectedSellerId)}" selected>${escapeHtml(fallbackSellerName || selectedSellerId)} (Profilo non in elenco)</option>` + optionsHtml;
+            }
+            sel.innerHTML = optionsHtml;
+        }
+
+        function handleListingOwnerChange() {
+            if (!isCurrentUserAdmin()) return;
+            const sel = document.getElementById('listing-owner-select');
+            const chosenPilot = pilots.find(p => p.id === sel?.value);
+            if (!chosenPilot) return;
+            const phoneInp = document.getElementById('listing-phone');
+            const cityInp = document.getElementById('listing-city');
+            if (phoneInp && chosenPilot.phone) phoneInp.value = chosenPilot.phone;
+            if (cityInp && chosenPilot.city) cityInp.value = chosenPilot.city;
+        }
+
         function openListingModal(editId = '') {
             const me = getCurrentPilot();
             if (!me) return;
@@ -3680,6 +3775,7 @@
                     return;
                 }
                 if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square text-quad-500"></i> Modifica Annuncio Mercatino';
+                populateListingOwnerSelect(item.sellerId || me.id, item.sellerName || '');
                 document.getElementById('listing-title').value = item.title || '';
                 document.getElementById('listing-category').value = item.category || 'Quad/ATV';
                 document.getElementById('listing-status').value = item.status || 'Disponibile';
@@ -3692,6 +3788,7 @@
             } else {
                 if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-tag text-quad-500"></i> Nuovo Annuncio Mercatino';
                 document.getElementById('listing-form')?.reset();
+                populateListingOwnerSelect(me.id, me.name);
                 document.getElementById('listing-status').value = 'Disponibile';
                 document.getElementById('listing-negotiable').checked = false;
                 document.getElementById('listing-phone').value = me.phone || '';
@@ -3715,8 +3812,6 @@
             const status = document.getElementById('listing-status').value;
             const price = Math.max(0, Number(document.getElementById('listing-price').value) || 0);
             const negotiable = Boolean(document.getElementById('listing-negotiable').checked);
-            const sellerPhone = document.getElementById('listing-phone').value.trim() || me.phone;
-            const city = document.getElementById('listing-city').value.trim() || me.city;
             const description = document.getElementById('listing-description').value.trim();
             const photos = pendingListingPhotos.slice(0, 5);
 
@@ -3725,6 +3820,29 @@
                 return;
             }
 
+            let targetSellerId = me.id;
+            let targetSellerName = me.name;
+            if (isCurrentUserAdmin()) {
+                const chosenId = document.getElementById('listing-owner-select')?.value;
+                const chosenPilot = pilots.find(p => p.id === chosenId);
+                if (chosenPilot) {
+                    targetSellerId = chosenPilot.id;
+                    targetSellerName = chosenPilot.name;
+                } else if (chosenId) {
+                    targetSellerId = chosenId;
+                    if (editId) {
+                        const existingItem = listings.find(l => l.id === editId);
+                        if (existingItem && existingItem.sellerId === chosenId) {
+                            targetSellerName = existingItem.sellerName || me.name;
+                        }
+                    }
+                }
+            }
+
+            const ownerPilot = pilots.find(p => p.id === targetSellerId);
+            const sellerPhone = document.getElementById('listing-phone').value.trim() || ownerPilot?.phone || me.phone;
+            const city = document.getElementById('listing-city').value.trim() || ownerPilot?.city || me.city;
+
             if (editId) {
                 const idx = listings.findIndex(l => l.id === editId);
                 if (idx < 0) return;
@@ -3732,8 +3850,12 @@
                     showToast('Non autorizzato alla modifica.', true);
                     return;
                 }
+                const updatedSellerId = isCurrentUserAdmin() ? targetSellerId : listings[idx].sellerId;
+                const updatedSellerName = isCurrentUserAdmin() ? targetSellerName : listings[idx].sellerName;
                 listings[idx] = {
                     ...listings[idx],
+                    sellerId: updatedSellerId,
+                    sellerName: updatedSellerName,
                     title,
                     category,
                     status,
@@ -3749,8 +3871,8 @@
             } else {
                 listings.unshift({
                     id: 'lst_' + Date.now(),
-                    sellerId: me.id,
-                    sellerName: me.name,
+                    sellerId: targetSellerId,
+                    sellerName: targetSellerName,
                     sellerPhone,
                     title,
                     category,
@@ -4040,6 +4162,7 @@
             if (!me || !r) return;
             if (r.creatorId !== me.id && !isCurrentUserAdmin()) return;
             showConfirmModal('Elimina Uscita', `Vuoi eliminare l'uscita "${r.title}"?`, () => {
+                deletedRecordIds = Array.from(new Set([...deletedRecordIds, String(rideId)]));
                 rides = rides.filter(item => item.id !== rideId);
                 saveState();
                 renderRidesList();
@@ -4067,28 +4190,48 @@
             if (!container) return;
 
             container.innerHTML = rides.map(r => {
-                const joined = Boolean(me && Array.isArray(r.participants) && r.participants.includes(me.id));
+                const participantIds = Array.isArray(r.participants) ? r.participants : [];
+                const joined = Boolean(me && participantIds.includes(me.id));
                 const isPast = isRidePast(r);
                 const dtText = (r.dateTimes || []).map(dt => `${dt.date} alle ${dt.time}`).join(' • ');
+                const creatorPilot = pilots.find(p => p.id === r.creatorId);
+                const organizerDisplay = creatorPilot ? creatorPilot.name : (r.creatorName || 'Pilota');
+                const participantNames = participantIds.map(pid => {
+                    const pObj = pilots.find(p => p.id === pid);
+                    return pObj ? pObj.name : null;
+                }).filter(Boolean);
+                const participantsChipsHtml = participantNames.length
+                    ? participantNames.map(pName => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold"><i class="fa-solid fa-helmet-safety text-[9px]"></i>${escapeHtml(pName)}</span>`).join('')
+                    : '<span class="text-[11px] text-stone-500 italic">Nessun iscritto ancora</span>';
                 return `
                     <div class="bg-mud-900 border ${isPast ? 'border-red-500/35 opacity-85' : 'border-stone-800'} rounded-3xl p-5 flex flex-col justify-between gap-4">
-                        <div class="space-y-2">
+                        <div class="space-y-2.5">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <span class="px-2.5 py-0.5 rounded-full bg-quad-500/15 text-quad-400 text-[10px] font-bold">${escapeHtml(r.difficulty)}</span>
                                     ${isPast ? '<span class="px-2.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/40 text-red-300 text-[10px] font-black uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Evento già passato</span>' : ''}
                                 </div>
-                                <span class="text-[11px] text-stone-400"><i class="fa-solid fa-users mr-1"></i>${(r.participants || []).length} partecipanti</span>
+                                <span class="text-[11px] text-stone-400"><i class="fa-solid fa-users mr-1"></i>${participantNames.length} partecipanti</span>
                             </div>
                             <h3 class="text-base font-black text-white">${escapeHtml(r.title)}</h3>
+                            <div class="flex items-center gap-2 text-xs text-quad-300 bg-quad-500/10 border border-quad-500/25 rounded-xl px-3 py-1.5">
+                                <i class="fa-solid fa-flag-checkered text-quad-400"></i>
+                                <span>Organizzata da: <strong class="text-white">${escapeHtml(organizerDisplay)}</strong></span>
+                            </div>
                             <p class="text-xs ${isPast ? 'text-stone-400 line-through' : 'text-emerald-400'} font-semibold"><i class="fa-regular fa-calendar mr-1.5"></i>${escapeHtml(dtText)}</p>
                             <p class="text-xs text-stone-300"><i class="fa-solid fa-location-dot text-quad-400 mr-1.5"></i>${escapeHtml(r.meeting)}</p>
                             ${r.notes ? `<p class="text-xs text-stone-400 bg-mud-950 border border-stone-800 rounded-xl p-3">${escapeHtml(r.notes)}</p>` : ''}
+                            <div class="bg-mud-950 border border-stone-800 rounded-xl p-3 space-y-1.5">
+                                <p class="text-[10px] font-black uppercase tracking-wider text-stone-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-users text-emerald-400"></i> Partecipanti iscritti (${participantNames.length}):
+                                </p>
+                                <div class="flex flex-wrap gap-1.5">${participantsChipsHtml}</div>
+                            </div>
                             ${r.attachment?.data && r.attachment.type?.startsWith('image/') ? `<button type="button" class="block w-full text-left" onclick="openRideImageLightbox('${r.attachment.data}')"><img src="${r.attachment.data}" alt="Locandina ${escapeHtml(r.title)}" class="w-full max-h-56 object-contain rounded-xl border border-stone-700 bg-black"><span class="block text-[10px] text-emerald-400 mt-1">Apri anteprima</span></button>` : ''}
                             ${r.attachment?.data && r.attachment.type === 'application/pdf' ? `<a href="${r.attachment.data}" download="${escapeHtml(r.attachment.name || 'programma.pdf')}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2"><i class="fa-solid fa-file-pdf"></i>${escapeHtml(r.attachment.name || 'Apri PDF')}</a>` : ''}
                         </div>
                         <div class="pt-3 border-t border-stone-800 flex flex-wrap items-center justify-between gap-2">
-                            <span class="text-[11px] text-stone-400">Org: <strong class="text-stone-200">${escapeHtml(r.creatorName)}</strong></span>
+                            <span class="text-[11px] text-stone-400">Organizzatore: <strong class="text-white">${escapeHtml(organizerDisplay)}</strong></span>
                             <div class="flex items-center gap-1.5">
                                 ${(me && (r.creatorId === me.id || isCurrentUserAdmin())) ? `
                                     <button type="button" onclick="openEditRideForm('${escapeHtml(r.id)}')"
@@ -4128,6 +4271,7 @@
                 'Cancella Messaggio Radio',
                 `Vuoi cancellare questo messaggio di ${msg.senderName}?`,
                 () => {
+                    deletedRecordIds = Array.from(new Set([...deletedRecordIds, String(msgId)]));
                     chatMessages = chatMessages.filter(m => m.id !== msgId);
                     saveState();
                     renderChatMessages();
@@ -4775,6 +4919,7 @@
 
         function deletePinRecoveryRequest(reqId) {
             if (!isCurrentUserAdmin()) return;
+            deletedRecordIds = Array.from(new Set([...deletedRecordIds, String(reqId)]));
             pinRecoveryRequests = pinRecoveryRequests.filter(r => r.id !== reqId);
             saveState(true);
             renderAdminPinRequests();
