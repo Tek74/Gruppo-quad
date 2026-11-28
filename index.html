@@ -143,19 +143,6 @@
                         }
                     });
                 }
-
-                if (OneSignal.Notifications && OneSignal.Notifications.addEventListener) {
-                    OneSignal.Notifications.addEventListener("foregroundWillDisplay", (event) => {
-                        try {
-                            const notif = event?.notification || {};
-                            const title = notif.title || "Nuovo Avviso GRUPPOQUAD";
-                            const body = notif.body || "Apri l'app per vedere gli aggiornamenti della squadra.";
-                            if (typeof showInAppPushBanner === "function") {
-                                showInAppPushBanner(title, body);
-                            }
-                        } catch (e) {}
-                    });
-                }
             } catch (err) {
                 console.warn("OneSignal init warning:", err);
                 if (typeof updatePushBellButtonUI === "function") {
@@ -345,16 +332,100 @@
     </div>
 
     <!-- ==================== MODALE MODIFICA COMPLETA PILOTA (ADMIN) ==================== -->
-    <div id="admin-edit-pilot-modal" data-modal="true" class="fixed inset-0 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4" style="z-index:10020;">
-        <div class="w-full max-w-3xl bg-mud-900 border border-quad-500/40 rounded-3xl p-5 space-y-3">
-            <div class="flex items-center justify-between gap-3">
-                <div><h3 class="text-lg font-black text-white">Modifica completa pilota</h3><p class="text-xs text-stone-400">L'amministratore può modificare tutti i campi della scheda in formato JSON.</p></div>
-                <button type="button" onclick="closeAdminEditPilotModal()" class="w-9 h-9 rounded-xl bg-stone-800 text-white"><i class="fa-solid fa-xmark"></i></button>
+    <div id="admin-edit-pilot-modal" data-modal="true" class="fixed inset-0 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto" style="z-index:10020;">
+        <div class="w-full max-w-3xl bg-mud-900 border border-quad-500/40 rounded-3xl p-5 sm:p-6 space-y-4 my-auto max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between gap-3 border-b border-stone-800 pb-3">
+                <div>
+                    <h3 class="text-lg font-black text-white flex items-center gap-2"><i class="fa-solid fa-user-pen text-quad-500"></i> Modifica Scheda Pilota (Admin)</h3>
+                    <p class="text-xs text-stone-400">Modifica direttamente anagrafica, mezzo attivo, GPS, stato e ruoli del pilota con salvataggio su Cloud.</p>
+                </div>
+                <button type="button" onclick="closeAdminEditPilotModal()" class="w-9 h-9 rounded-xl bg-stone-800 hover:bg-stone-700 text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <input type="hidden" id="admin-edit-pilot-id">
-            <textarea id="admin-edit-pilot-json" rows="18" spellcheck="false" class="w-full bg-mud-950 border border-stone-700 rounded-xl p-3 text-xs text-stone-100 font-mono focus:outline-none focus:border-quad-500"></textarea>
-            <p class="text-[10px] text-amber-300">Non modificare il campo id. Impostando isAdmin: true puoi abilitare un amministratore collaboratore.</p>
-            <div class="flex justify-end gap-2"><button type="button" onclick="closeAdminEditPilotModal()" class="px-4 py-2 rounded-xl bg-stone-800 text-stone-200 text-xs font-bold">Annulla</button><button type="button" onclick="saveAdminEditPilot()" class="px-4 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold">Salva scheda</button></div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Nome *</label>
+                    <input type="text" id="admin-ep-firstName" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Cognome *</label>
+                    <input type="text" id="admin-ep-lastName" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Email *</label>
+                    <input type="email" id="admin-ep-email" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Telefono WhatsApp</label>
+                    <input type="text" id="admin-ep-phone" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Città / Località</label>
+                    <input type="text" id="admin-ep-city" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Stato Operativo</label>
+                    <select id="admin-ep-status" onchange="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                        <option value="Pronto al Trail">Pronto al Trail</option>
+                        <option value="In Sella (Off-Road)">In Sella (Off-Road)</option>
+                        <option value="Manutenzione Box">Manutenzione Box</option>
+                        <option value="Offline / Riposo">Offline / Riposo</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-stone-300 mb-1">Mezzo Attivo (Modello)</label>
+                    <input type="text" id="admin-ep-vehModel" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-stone-300 mb-1">Cilindrata (cc)</label>
+                        <input type="number" id="admin-ep-vehCc" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-stone-300 mb-1">Offerta (€)</label>
+                        <input type="number" step="0.5" id="admin-ep-offeredAmount" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[11px] font-bold text-stone-300 mb-1">Latitudine GPS</label>
+                        <input type="number" step="0.0001" id="admin-ep-lat" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-stone-300 mb-1">Longitudine GPS</label>
+                        <input type="number" step="0.0001" id="admin-ep-lng" oninput="syncAdminFormToJson()" class="w-full bg-mud-950 border border-stone-700 rounded-xl px-3 py-2 text-xs text-white focus:border-quad-500 focus:outline-none">
+                    </div>
+                </div>
+                <div class="flex items-center pt-4">
+                    <label class="flex items-center gap-2.5 bg-mud-950 border border-stone-700 rounded-xl px-3.5 py-2 w-full cursor-pointer select-none">
+                        <input type="checkbox" id="admin-ep-isAdmin" onchange="syncAdminFormToJson()" class="w-4 h-4 accent-quad-500 rounded">
+                        <span class="text-xs font-bold text-quad-400">Ruolo Amministratore (isAdmin)</span>
+                    </label>
+                </div>
+                <div class="sm:col-span-2 bg-mud-950 border border-stone-800 rounded-2xl p-3 flex items-center gap-3">
+                    <img id="admin-ep-photo-preview" src="" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="Foto Pilota"
+                         class="w-14 h-14 rounded-xl object-cover border border-quad-500 shrink-0">
+                    <div class="flex-1 min-w-0 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[11px] font-bold text-stone-300">Foto Mezzo / Profilo Pilota</label>
+                            <button type="button" onclick="clearAdminPilotPhoto()" class="text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer">Rimuovi Foto</button>
+                        </div>
+                        <input type="file" id="admin-ep-photo-file" accept="image/*" onchange="handleAdminPilotPhotoUpload(event)"
+                               class="w-full text-[11px] text-stone-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-quad-600 file:text-white cursor-pointer">
+                        <input type="url" id="admin-ep-photo" oninput="previewAdminPilotPhotoUrl(this.value); syncAdminFormToJson();" placeholder="URL foto https://..."
+                               class="w-full bg-mud-900 border border-stone-700 rounded-lg px-2.5 py-1 text-[11px] text-white focus:border-quad-500 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+            <details class="bg-mud-950 border border-stone-800 rounded-2xl p-3">
+                <summary class="text-xs font-bold text-stone-300 cursor-pointer select-none">Editor JSON Completo (avanzato: garage multi-mezzo, pagella, tutti i campi)</summary>
+                <textarea id="admin-edit-pilot-json" rows="12" spellcheck="false" class="mt-2.5 w-full bg-black/60 border border-stone-700 rounded-xl p-3 text-xs text-stone-100 font-mono focus:outline-none focus:border-quad-500"></textarea>
+                <p class="text-[10px] text-amber-300 mt-1">Non modificare il campo id.</p>
+            </details>
+            <div class="flex justify-end gap-2 pt-2 border-t border-stone-800">
+                <button type="button" onclick="closeAdminEditPilotModal()" class="px-4 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold cursor-pointer">Annulla</button>
+                <button type="button" onclick="saveAdminEditPilot()" class="px-5 py-2 rounded-xl bg-quad-600 hover:bg-quad-500 text-white text-xs font-bold shadow-lg shadow-quad-600/25 cursor-pointer">Salva scheda & Sincronizza Cloud</button>
+            </div>
         </div>
     </div>
 
@@ -1553,10 +1624,6 @@
                                         class="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
                                     <i class="fa-solid fa-file-arrow-down"></i> Esporta JSON
                                 </button>
-                                <button type="button" onclick="optimizeAllStoredImages(true)"
-                                        class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 transition cursor-pointer">
-                                    <i class="fa-solid fa-compress"></i> Comprimi Foto & Libera Spazio
-                                </button>
                             </div>
                         </div>
                         <div id="admin-pin-requests-list" class="space-y-2"></div>
@@ -1645,6 +1712,28 @@
                                         </label>
                                         <input type="password" id="garage-pin" autocomplete="new-password" required minlength="4" maxlength="32" placeholder="Es. 1234"
                                                class="w-full bg-mud-800 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-white tracking-wider focus:border-amber-500 focus:outline-none">
+                                    </div>
+
+                                    <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-xs font-bold text-white flex items-center gap-1.5">
+                                                <i class="fa-solid fa-camera text-quad-400"></i> Foto Profilo / Mezzo Principale
+                                            </label>
+                                            <button type="button" onclick="removeProfileAvatarPhoto()" class="text-[11px] font-bold text-red-400 hover:text-red-300 cursor-pointer">
+                                                <i class="fa-solid fa-trash-can mr-1"></i>Rimuovi Foto
+                                            </button>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <img id="garage-avatar-preview" src="" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="Anteprima Foto Profilo"
+                                                 class="w-16 h-16 rounded-xl object-cover border-2 border-quad-500 shrink-0 bg-mud-900">
+                                            <div class="flex-1 min-w-0 space-y-1.5">
+                                                <input type="file" id="garage-avatar-file" accept="image/*" onchange="handleProfileAvatarUpload(event)"
+                                                       class="w-full text-[11px] text-stone-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-quad-600 file:text-white hover:file:bg-quad-500 cursor-pointer">
+                                                <input type="url" id="garage-avatar-url" oninput="previewProfileAvatarUrl(this.value)" placeholder="Oppure incolla URL immagine https://..."
+                                                       class="w-full bg-mud-800 border border-stone-700 rounded-lg px-2.5 py-1 text-[11px] text-white focus:border-quad-500 focus:outline-none">
+                                            </div>
+                                        </div>
+                                        <p class="text-[10px] text-stone-400">Carica dal dispositivo o incolla un link per cambiare subito la foto mostrata nell'intestazione, nella mappa amici e nel profilo.</p>
                                     </div>
 
                                     <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 text-xs text-stone-400 space-y-1">
@@ -1942,7 +2031,10 @@
                     <img id="vehicle-photo-preview" src="" onerror="this.onerror=null; this.src=FALLBACK_QUAD_SVG;" alt="Anteprima Mezzo"
                          class="w-20 h-20 rounded-xl object-cover border-2 border-quad-500 shrink-0">
                     <div class="flex-1 min-w-0 space-y-1.5">
-                        <label class="block text-xs font-bold text-white">Foto del Mezzo</label>
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-white">Foto del Mezzo</label>
+                            <button type="button" onclick="clearVehicleModalPhoto()" class="text-[10px] font-bold text-red-400 hover:text-red-300 cursor-pointer">Rimuovi</button>
+                        </div>
                         <input type="file" id="vehicle-photo-file" accept="image/*" onchange="handleVehiclePhotoUpload(event)"
                                class="w-full text-[11px] text-stone-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-quad-600 file:text-white hover:file:bg-quad-500 cursor-pointer">
                         <input type="url" id="vehicle-photo-url" oninput="previewVehiclePhotoUrl(this.value)" placeholder="Oppure incolla URL https://..."
@@ -2395,7 +2487,7 @@
         function getPilotActiveVehicle(pilot) {
             if (!pilot) return { model: 'Quad ATV', cc: 500, tire: '0.45 Bar', drive: '4x4', photo: '' };
             const list = Array.isArray(pilot.vehicles) ? pilot.vehicles : [];
-            return list.find(v => v.id === pilot.activeVehicleId) || list[0] || {
+            const base = list.find(v => v.id === pilot.activeVehicleId) || list[0] || {
                 id: 'veh_default',
                 type: 'Quad / ATV',
                 model: pilot.quadModel || 'Quad ATV',
@@ -2403,6 +2495,10 @@
                 tire: '0.45 Bar',
                 drive: '4x4',
                 photo: ''
+            };
+            return {
+                ...base,
+                photo: base.photo || pilot.avatarPhoto || ''
             };
         }
 
@@ -2474,125 +2570,8 @@
             }
         }
 
-        function compressDataUrlImage(dataUrl, maxDim = 960, quality = 0.72) {
-            return new Promise((resolve) => {
-                if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-                    resolve(dataUrl || '');
-                    return;
-                }
-                const img = new Image();
-                img.onload = () => {
-                    try {
-                        let w = img.naturalWidth || img.width;
-                        let h = img.naturalHeight || img.height;
-                        if (!w || !h) { resolve(dataUrl); return; }
-                        if (w > maxDim || h > maxDim) {
-                            if (w >= h) {
-                                h = Math.round((h * maxDim) / w);
-                                w = maxDim;
-                            } else {
-                                w = Math.round((w * maxDim) / h);
-                                h = maxDim;
-                            }
-                        }
-                        const canvas = document.createElement('canvas');
-                        canvas.width = w;
-                        canvas.height = h;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, w, h);
-                        const compressed = canvas.toDataURL('image/jpeg', quality);
-                        resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
-                    } catch (err) {
-                        resolve(dataUrl);
-                    }
-                };
-                img.onerror = () => resolve(dataUrl);
-                img.src = dataUrl;
-            });
-        }
-
-        function compressImageFileToDataUrl(file, maxDim = 960, quality = 0.72) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = async () => {
-                    const raw = String(reader.result || '');
-                    const out = await compressDataUrlImage(raw, maxDim, quality);
-                    resolve(out);
-                };
-                reader.onerror = () => reject(reader.error);
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function estimateLocalStorageKB() {
-            let total = 0;
-            for (let i = 0; i < localStorage.length; i++) {
-                const k = localStorage.key(i) || '';
-                const v = localStorage.getItem(k) || '';
-                total += (k.length + v.length) * 2;
-            }
-            return Math.round(total / 1024);
-        }
-
-        async function optimizeAllStoredImages(notify = false) {
-            const beforeKB = estimateLocalStorageKB();
-            let modified = 0;
-
-            for (const p of (pilots || [])) {
-                if (p.avatar && p.avatar.startsWith('data:image/') && p.avatar.length > 60000) {
-                    const c = await compressDataUrlImage(p.avatar, 480, 0.72);
-                    if (c.length < p.avatar.length) { p.avatar = c; modified++; }
-                }
-                for (const v of (p.vehicles || [])) {
-                    if (v.photo && v.photo.startsWith('data:image/') && v.photo.length > 90000) {
-                        const c = await compressDataUrlImage(v.photo, 960, 0.72);
-                        if (c.length < v.photo.length) { v.photo = c; modified++; }
-                    }
-                }
-            }
-
-            for (const item of (listings || [])) {
-                if (Array.isArray(item.photos)) {
-                    for (let i = 0; i < item.photos.length; i++) {
-                        const ph = item.photos[i];
-                        if (ph && ph.startsWith('data:image/') && ph.length > 90000) {
-                            const c = await compressDataUrlImage(ph, 900, 0.70);
-                            if (c.length < ph.length) { item.photos[i] = c; modified++; }
-                        }
-                    }
-                    if (item.photos[0]) item.photo = item.photos[0];
-                } else if (item.photo && item.photo.startsWith('data:image/') && item.photo.length > 90000) {
-                    const c = await compressDataUrlImage(item.photo, 900, 0.70);
-                    if (c.length < item.photo.length) { item.photo = c; modified++; }
-                }
-            }
-
-            for (const r of (rides || [])) {
-                if (r.attachment && r.attachment.data && r.attachment.data.startsWith('data:image/') && r.attachment.data.length > 120000) {
-                    const c = await compressDataUrlImage(r.attachment.data, 1080, 0.72);
-                    if (c.length < r.attachment.data.length) {
-                        r.attachment.data = c;
-                        r.attachment.size = Math.round((c.length * 3) / 4);
-                        modified++;
-                    }
-                }
-            }
-
-            if (Array.isArray(chatMessages) && chatMessages.length > 300) {
-                chatMessages = chatMessages.slice(-300);
-            }
-
-            saveState(true);
-            const afterKB = estimateLocalStorageKB();
-            if (notify) {
-                showToast(`Ottimizzazione completata: ${modified} foto ridotte (${beforeKB} KB → ${afterKB} KB).`);
-            }
-            return { modified, beforeKB, afterKB };
-        }
-
-        let isAutoCompressingStorage = false;
         function saveState(pushToCloud = true) {
-            const writeAll = () => {
+            try {
                 localStorage.setItem(STORAGE_KEYS.PILOTS, JSON.stringify(pilots));
                 localStorage.setItem(STORAGE_KEYS.LISTINGS, JSON.stringify(listings));
                 localStorage.setItem(STORAGE_KEYS.RIDES, JSON.stringify(rides));
@@ -2604,26 +2583,9 @@
                 localStorage.setItem('gq_deleted_pilot_ids_v1', JSON.stringify(deletedPilotIds));
                 if (currentPilotId) localStorage.setItem(STORAGE_KEYS.CURRENT_ID, currentPilotId);
                 else localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
-            };
-            try {
-                writeAll();
             } catch (e) {
                 console.warn('Errore salvataggio locale:', e);
-                if (!isAutoCompressingStorage) {
-                    isAutoCompressingStorage = true;
-                    showToast('Spazio quasi pieno: compressione automatica foto in corso...');
-                    optimizeAllStoredImages(false).then(res => {
-                        isAutoCompressingStorage = false;
-                        try {
-                            writeAll();
-                            showToast(`Spazio liberato automaticamente (${res.beforeKB} KB → ${res.afterKB} KB)!`);
-                        } catch (e2) {
-                            showToast('Spazio locale insufficiente: esporta il JSON da Admin ed elimina vecchi annunci.', true);
-                        }
-                    });
-                } else {
-                    showToast('Spazio locale insufficiente: esporta i dati e riduci le immagini.', true);
-                }
+                showToast('Spazio locale insufficiente: esporta i dati e riduci le immagini.', true);
             }
             if (pushToCloud) pushStateToCloud();
         }
@@ -3689,17 +3651,16 @@
             if (files.length > remaining) {
                 showToast(`Puoi caricare al massimo 5 foto: aggiunte le prime ${remaining}.`, true);
             }
-            toProcess.forEach(async file => {
+            toProcess.forEach(file => {
                 if (!file.type.startsWith('image/')) return;
-                try {
-                    const compressed = await compressImageFileToDataUrl(file, 900, 0.70);
-                    if (pendingListingPhotos.length < 5 && compressed) {
-                        pendingListingPhotos.push(compressed);
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (pendingListingPhotos.length < 5 && reader.result) {
+                        pendingListingPhotos.push(String(reader.result));
                         renderListingPhotosPreview();
                     }
-                } catch (err) {
-                    console.warn('Errore compressione foto annuncio:', err);
-                }
+                };
+                reader.readAsDataURL(file);
             });
             event.target.value = '';
         }
@@ -3803,12 +3764,6 @@
                     createdAt: Date.now()
                 });
                 showToast('Nuovo annuncio pubblicato nel mercatino!');
-                sendGroupPushNotification(
-                    `Nuovo Annuncio Mercatino • € ${price}`,
-                    `${me.name} ha pubblicato: ${title} (${category})`,
-                    'market',
-                    { title, category, price }
-                );
             }
 
             saveState();
@@ -3933,18 +3888,12 @@
                 return;
             }
             const reader = new FileReader();
-            reader.onload = async () => {
-                let finalData = String(reader.result || '');
-                let finalType = file.type;
-                if (file.type.startsWith('image/')) {
-                    finalData = await compressDataUrlImage(finalData, 1080, 0.72);
-                    finalType = 'image/jpeg';
-                }
+            reader.onload = () => {
                 pendingRideAttachment = {
                     name: file.name,
-                    type: finalType,
-                    data: finalData,
-                    size: Math.round((finalData.length * 3) / 4)
+                    type: file.type,
+                    data: String(reader.result || ''),
+                    size: file.size
                 };
                 if (box) box.classList.remove('hidden');
                 if (hint) hint.textContent = 'File pronto: verrà salvato insieme all’uscita.';
@@ -4068,13 +4017,6 @@
             clearRideProgramInput();
             renderRidesList();
             showToast('Nuova uscita pubblicata!');
-            const firstDt = dateTimes[0] ? `${dateTimes[0].date} alle ${dateTimes[0].time}` : '';
-            sendGroupPushNotification(
-                `Nuova Uscita Quad: ${title}`,
-                `${me.name} propone ritrovo a ${meeting}${firstDt ? ' (' + firstDt + ')' : ''}`,
-                'ride',
-                { title, meeting }
-            );
         }
 
         function toggleRideParticipation(rideId) {
@@ -4251,12 +4193,6 @@
             input.value = '';
             saveState();
             renderChatMessages();
-            sendGroupPushNotification(
-                `Radio Squadra • ${me.name}`,
-                text.length > 110 ? text.slice(0, 107) + '...' : text,
-                'radio',
-                { sender: me.name }
-            );
         }
 
         // ==================== PROFILO, GARAGE MULTI-MEZZO & ADMIN ====================
@@ -4265,7 +4201,12 @@
             if (!me) return;
             const activeVeh = getPilotActiveVehicle(me);
 
-            document.getElementById('garage-quad-photo').src = activeVeh.photo || window.FALLBACK_QUAD_SVG;
+            const currentPhoto = me.avatarPhoto || activeVeh.photo || '';
+            document.getElementById('garage-quad-photo').src = currentPhoto || window.FALLBACK_QUAD_SVG;
+            const avatarPrev = document.getElementById('garage-avatar-preview');
+            if (avatarPrev) avatarPrev.src = currentPhoto || window.FALLBACK_QUAD_SVG;
+            const avatarUrlInp = document.getElementById('garage-avatar-url');
+            if (avatarUrlInp) avatarUrlInp.value = currentPhoto;
             document.getElementById('garage-owner-title').textContent = `${me.name} • Garage`;
             document.getElementById('garage-vehicles-badge').textContent = `${(me.vehicles || []).length} Mezzi nel Garage`;
 
@@ -4342,6 +4283,8 @@
             const me = getCurrentPilot();
             if (!me) return;
             me.activeVehicleId = vehId;
+            const v = (me.vehicles || []).find(item => item.id === vehId);
+            if (v) me.avatarPhoto = v.photo || '';
             saveState();
             refreshAllViews();
             showToast('Mezzo attivo aggiornato!');
@@ -4388,13 +4331,10 @@
         async function handleVehiclePhotoUpload(event) {
             const file = event.target?.files?.[0];
             if (!file) return;
-            try {
-                const dataUrl = await compressImageFileToDataUrl(file, 960, 0.72);
-                document.getElementById('vehicle-photo-url').value = dataUrl;
-                previewVehiclePhotoUrl(dataUrl);
-            } catch (err) {
-                console.warn('Errore compressione foto mezzo:', err);
-            }
+            const dataUrl = await compressImageFileToDataUrl(file, 900, 0.82);
+            document.getElementById('vehicle-photo-url').value = dataUrl;
+            previewVehiclePhotoUrl(dataUrl);
+            event.target.value = '';
         }
 
         function handleSaveVehicle(event) {
@@ -4421,8 +4361,9 @@
                 me.vehicles.push(payload);
             }
 
-            if (document.getElementById('vehicle-set-active').checked) {
+            if (document.getElementById('vehicle-set-active').checked || me.activeVehicleId === payload.id) {
                 me.activeVehicleId = payload.id;
+                me.avatarPhoto = payload.photo || '';
             }
 
             saveState();
@@ -4476,6 +4417,105 @@
             }
         }
 
+        function compressImageFileToDataUrl(file, maxSide = 900, quality = 0.82) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxSide || h > maxSide) {
+                            if (w >= h) {
+                                h = Math.round((h * maxSide) / w);
+                                w = maxSide;
+                            } else {
+                                w = Math.round((w * maxSide) / h);
+                                h = maxSide;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = () => resolve(String(reader.result || ''));
+                    img.src = String(reader.result || '');
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function previewProfileAvatarUrl(url) {
+            const clean = (url || '').trim();
+            const prev = document.getElementById('garage-avatar-preview');
+            const banner = document.getElementById('garage-quad-photo');
+            if (prev) prev.src = clean || window.FALLBACK_QUAD_SVG;
+            if (banner) banner.src = clean || window.FALLBACK_QUAD_SVG;
+        }
+
+        async function handleProfileAvatarUpload(event) {
+            const file = event?.target?.files?.[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Seleziona un file immagine valido (JPG, PNG, WebP).', true);
+                return;
+            }
+            try {
+                const dataUrl = await compressImageFileToDataUrl(file, 900, 0.82);
+                const urlInp = document.getElementById('garage-avatar-url');
+                if (urlInp) urlInp.value = dataUrl;
+                previewProfileAvatarUrl(dataUrl);
+                applyProfilePhotoToCurrentUser(dataUrl, true);
+                showToast('Foto profilo aggiornata!');
+            } catch (e) {
+                showToast('Errore durante il caricamento della foto.', true);
+            }
+            event.target.value = '';
+        }
+
+        function removeProfileAvatarPhoto() {
+            const urlInp = document.getElementById('garage-avatar-url');
+            if (urlInp) urlInp.value = '';
+            previewProfileAvatarUrl('');
+            applyProfilePhotoToCurrentUser('', true);
+            showToast('Foto rimossa, ripristinata immagine predefinita.');
+        }
+
+        function applyProfilePhotoToCurrentUser(photoVal, autoSave = false) {
+            const me = getCurrentPilot();
+            if (!me) return;
+            me.avatarPhoto = photoVal;
+            if (!Array.isArray(me.vehicles) || !me.vehicles.length) {
+                me.vehicles = [{
+                    id: 'veh_' + Date.now(),
+                    type: 'Quad / ATV',
+                    model: me.quadModel || 'Quad ATV',
+                    cc: me.cc || 500,
+                    tire: '0.45 Bar',
+                    drive: '4x4',
+                    photo: photoVal
+                }];
+                me.activeVehicleId = me.vehicles[0].id;
+            } else {
+                const activeVeh = me.vehicles.find(v => v.id === me.activeVehicleId) || me.vehicles[0];
+                if (activeVeh) activeVeh.photo = photoVal;
+            }
+            if (autoSave) {
+                saveState();
+                refreshAllViews();
+            }
+        }
+
+        function clearVehicleModalPhoto() {
+            const urlInp = document.getElementById('vehicle-photo-url');
+            if (urlInp) urlInp.value = '';
+            previewVehiclePhotoUrl('');
+        }
+
         function handleSaveGarage(event) {
             event.preventDefault();
             const me = getCurrentPilot();
@@ -4489,9 +4529,12 @@
             me.city = document.getElementById('garage-city').value.trim();
             me.pin = document.getElementById('garage-pin').value.trim();
 
+            const photoVal = (document.getElementById('garage-avatar-url')?.value || '').trim();
+            applyProfilePhotoToCurrentUser(photoVal, false);
+
             saveState();
             refreshAllViews();
-            showToast('Profilo e dati GPS salvati con successo!');
+            showToast('Profilo, foto e dati GPS salvati con successo!');
         }
 
         // ==================== MODALI NUOVO PILOTA, RECUPERO PIN, PAGAMENTO & CLOUD ====================
@@ -4741,10 +4784,84 @@
             const me = getCurrentPilot();
             const target = pilots.find(p => p.id === pilotId);
             if (!me?.isAdmin || !target) { showToast('Operazione riservata agli amministratori.', true); return; }
+            const veh = getPilotActiveVehicle(target);
             document.getElementById('admin-edit-pilot-id').value = pilotId;
+            document.getElementById('admin-ep-firstName').value = target.firstName || (target.name || '').split(' ')[0] || '';
+            document.getElementById('admin-ep-lastName').value = target.lastName || (target.name || '').split(' ').slice(1).join(' ') || '';
+            document.getElementById('admin-ep-email').value = target.email || '';
+            document.getElementById('admin-ep-phone').value = target.phone || '';
+            document.getElementById('admin-ep-city').value = target.city || '';
+            document.getElementById('admin-ep-status').value = target.status || 'Pronto al Trail';
+            document.getElementById('admin-ep-vehModel').value = veh.model || '';
+            document.getElementById('admin-ep-vehCc').value = veh.cc || 500;
+            document.getElementById('admin-ep-offeredAmount').value = Number(target.offeredAmount || 0);
+            document.getElementById('admin-ep-lat').value = Number(target.lat || 45.3541);
+            document.getElementById('admin-ep-lng').value = Number(target.lng || 10.7336);
+            document.getElementById('admin-ep-isAdmin').checked = Boolean(target.isAdmin);
+            const curPhoto = veh.photo || target.avatarPhoto || '';
+            if (document.getElementById('admin-ep-photo')) document.getElementById('admin-ep-photo').value = curPhoto;
+            if (document.getElementById('admin-ep-photo-preview')) document.getElementById('admin-ep-photo-preview').src = curPhoto || window.FALLBACK_QUAD_SVG;
             document.getElementById('admin-edit-pilot-json').value = JSON.stringify(target, null, 2);
             const modal = document.getElementById('admin-edit-pilot-modal');
             modal.classList.remove('hidden'); modal.classList.add('flex');
+        }
+
+        function syncAdminFormToJson() {
+            try {
+                const obj = JSON.parse(document.getElementById('admin-edit-pilot-json').value);
+                const fn = document.getElementById('admin-ep-firstName').value.trim();
+                const ln = document.getElementById('admin-ep-lastName').value.trim();
+                obj.firstName = fn;
+                obj.lastName = ln;
+                obj.name = `${fn} ${ln}`.trim();
+                obj.email = document.getElementById('admin-ep-email').value.trim().toLowerCase();
+                obj.phone = document.getElementById('admin-ep-phone').value.trim();
+                obj.city = document.getElementById('admin-ep-city').value.trim();
+                obj.status = document.getElementById('admin-ep-status').value;
+                obj.offeredAmount = Number(document.getElementById('admin-ep-offeredAmount').value) || 0;
+                obj.lat = parseFloat(document.getElementById('admin-ep-lat').value) || obj.lat;
+                obj.lng = parseFloat(document.getElementById('admin-ep-lng').value) || obj.lng;
+                obj.isAdmin = Boolean(document.getElementById('admin-ep-isAdmin').checked);
+                if (!Array.isArray(obj.vehicles) || !obj.vehicles.length) {
+                    obj.vehicles = [{ id: 'veh_' + Date.now(), type: 'Quad / ATV', model: '', cc: 500, tire: '0.45 Bar', drive: '4x4', photo: '' }];
+                    obj.activeVehicleId = obj.vehicles[0].id;
+                }
+                const activeVeh = obj.vehicles.find(v => v.id === obj.activeVehicleId) || obj.vehicles[0];
+                const adminPhotoEl = document.getElementById('admin-ep-photo');
+                if (adminPhotoEl) {
+                    const pVal = adminPhotoEl.value.trim();
+                    obj.avatarPhoto = pVal;
+                    if (activeVeh) activeVeh.photo = pVal;
+                }
+                if (activeVeh) {
+                    activeVeh.model = document.getElementById('admin-ep-vehModel').value.trim();
+                    activeVeh.cc = Number(document.getElementById('admin-ep-vehCc').value) || 500;
+                }
+                document.getElementById('admin-edit-pilot-json').value = JSON.stringify(obj, null, 2);
+            } catch (e) {}
+        }
+
+        function previewAdminPilotPhotoUrl(url) {
+            const prev = document.getElementById('admin-ep-photo-preview');
+            if (prev) prev.src = (url || '').trim() || window.FALLBACK_QUAD_SVG;
+        }
+
+        async function handleAdminPilotPhotoUpload(event) {
+            const file = event?.target?.files?.[0];
+            if (!file) return;
+            const dataUrl = await compressImageFileToDataUrl(file, 900, 0.82);
+            const inp = document.getElementById('admin-ep-photo');
+            if (inp) inp.value = dataUrl;
+            previewAdminPilotPhotoUrl(dataUrl);
+            syncAdminFormToJson();
+            event.target.value = '';
+        }
+
+        function clearAdminPilotPhoto() {
+            const inp = document.getElementById('admin-ep-photo');
+            if (inp) inp.value = '';
+            previewAdminPilotPhotoUrl('');
+            syncAdminFormToJson();
         }
 
         function closeAdminEditPilotModal() {
@@ -4983,59 +5100,8 @@
             modal.classList.remove('flex');
         }
 
-        let pushBannerTimeout = null;
-        function showInAppPushBanner(title, body) {
-            const banner = document.getElementById('push-notification-banner');
-            const titleEl = document.getElementById('push-banner-title');
-            const bodyEl = document.getElementById('push-banner-body');
-            if (!banner) return;
-            if (titleEl) titleEl.textContent = title || 'Avviso GRUPPOQUAD';
-            if (bodyEl) bodyEl.textContent = body || '';
-            banner.classList.remove('hidden');
-            banner.classList.add('push-banner-enter');
-            if (pushBannerTimeout) clearTimeout(pushBannerTimeout);
-            pushBannerTimeout = setTimeout(() => closePushBanner(), 7000);
-        }
-
         function closePushBanner() {
             document.getElementById('push-notification-banner')?.classList.add('hidden');
-        }
-
-        async function sendGroupPushNotification(title, body, category = 'general', extraData = {}) {
-            if (!PUSH_BACKEND_URL) return;
-            const me = typeof getCurrentPilot === 'function' ? getCurrentPilot() : null;
-            const subscriptionIds = pilots
-                .filter(p => p && p.id !== me?.id && p.pushSubscriptionId)
-                .map(p => p.pushSubscriptionId);
-
-            const payload = {
-                app_id: ONESIGNAL_APP_ID,
-                title,
-                body,
-                category,
-                sender_id: me?.id || '',
-                sender_name: me?.name || 'GRUPPOQUAD',
-                subscription_ids: subscriptionIds,
-                url: window.location.origin + window.location.pathname,
-                data: {
-                    group: 'GRUPPOQUAD',
-                    category,
-                    ...extraData
-                }
-            };
-
-            try {
-                const resp = await fetch(PUSH_BACKEND_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!resp.ok) {
-                    console.warn('Push worker response:', resp.status);
-                }
-            } catch (err) {
-                console.warn('Errore invio push al worker Cloudflare:', err);
-            }
         }
 
         function updatePushBellButtonUI(enabled) {
@@ -5200,6 +5266,67 @@
             });
         }
 
+        // ==================== SINCRONIZZAZIONE CONTINUA CON IL CLOUD ====================
+        let cloudAutoSyncTimer = null;
+        let cloudEventSource = null;
+
+        function isUserActivelyEditingForm() {
+            const active = document.activeElement;
+            if (active) {
+                const tag = (active.tagName || '').toUpperCase();
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+            }
+            const openModals = [
+                'listing-modal',
+                'vehicle-modal',
+                'admin-edit-pilot-modal',
+                'admin-edit-pin-modal',
+                'social-links-modal',
+                'qotw-detail-modal',
+                'new-pilot-modal'
+            ];
+            return openModals.some(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+        }
+
+        function startContinuousCloudSync() {
+            const baseUrl = normalizeCloudBaseUrl(FIREBASE_RTDB_URL);
+            try {
+                if (cloudEventSource) cloudEventSource.close();
+                cloudEventSource = new EventSource(`${baseUrl}/${CLOUD_NODE}.json`);
+                const onCloudStreamUpdate = async (evt) => {
+                    try {
+                        if (!evt || !evt.data || evt.data === 'null') return;
+                        if (isUserActivelyEditingForm()) return;
+                        await pullStateFromCloud(false, true);
+                    } catch (e) {}
+                };
+                cloudEventSource.addEventListener('put', onCloudStreamUpdate);
+                cloudEventSource.addEventListener('patch', onCloudStreamUpdate);
+            } catch (e) {
+                console.warn('SSE Cloud non disponibile, attivo polling continuo:', e);
+            }
+
+            if (cloudAutoSyncTimer) clearInterval(cloudAutoSyncTimer);
+            cloudAutoSyncTimer = setInterval(() => {
+                if (!document.hidden && !isUserActivelyEditingForm()) {
+                    pullStateFromCloud(false, true);
+                }
+            }, 10000);
+
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && !isUserActivelyEditingForm()) {
+                    pullStateFromCloud(false, true);
+                }
+            });
+
+            window.addEventListener('online', () => {
+                pushStateToCloud(false).then(() => pullStateFromCloud(false, true));
+            });
+        }
+
         // ==================== AVVIO APPLICAZIONE ====================
         window.addEventListener('DOMContentLoaded', async () => {
             loadInitialState();
@@ -5213,9 +5340,10 @@
             document.getElementById('app-shell')?.classList.add('hidden');
             document.getElementById('login-screen')?.classList.remove('hidden');
 
-            // Sincronizzazione iniziale interna protetta; lo scaricamento manuale/completo resta riservato all'Admin
+            // Sincronizzazione iniziale e avvio sync continua in tempo reale con il Cloud
             await pullStateFromCloud(false, true);
             renderLoginSocialLinks();
+            startContinuousCloudSync();
         });
     </script>
 </body>
