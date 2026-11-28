@@ -301,6 +301,36 @@
         </div>
     </div>
 
+    <!-- ==================== MODALE MODIFICA LINK SOCIAL UFFICIALI (ADMIN) ==================== -->
+    <div id="social-links-modal" data-modal="true" style="z-index: 10025;" class="fixed inset-0 hidden items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-mud-900 border border-amber-500/40 rounded-3xl max-w-2xl w-full p-6 shadow-2xl my-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-stone-800">
+                <div>
+                    <h3 class="text-lg font-black text-white flex items-center gap-2">
+                        <i class="fa-solid fa-share-nodes text-amber-400"></i> Modifica Link Social Ufficiali (Admin)
+                    </h3>
+                    <p class="text-xs text-stone-400">Aggiorna URL e nomi profilo mostrati nella schermata di Login e nella Dashboard.</p>
+                </div>
+                <button type="button" onclick="closeSocialLinksModal()" class="text-stone-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="social-links-form" onsubmit="handleSaveSocialLinks(event)" class="space-y-3">
+                <div id="social-links-editor-list" class="space-y-3 max-h-[62vh] overflow-y-auto pr-1"></div>
+
+                <div class="pt-3 border-t border-stone-800 flex justify-end gap-2">
+                    <button type="button" onclick="closeSocialLinksModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 text-stone-300 text-xs font-semibold cursor-pointer">
+                        Annulla
+                    </button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-quad-600 hover:from-amber-500 hover:to-quad-500 text-white text-xs font-black shadow-lg shadow-amber-600/25 cursor-pointer">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> Salva Tutti i Link Social
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ==================== MODALE MODIFICA COMPLETA PILOTA (ADMIN) ==================== -->
     <div id="admin-edit-pilot-modal" data-modal="true" class="fixed inset-0 hidden items-center justify-center bg-black/90 backdrop-blur-md p-4" style="z-index:10020;">
         <div class="w-full max-w-3xl bg-mud-900 border border-quad-500/40 rounded-3xl p-5 space-y-3">
@@ -2414,7 +2444,7 @@
                 pinRecoveryRequests = JSON.parse(localStorage.getItem('gq_pin_recovery_reqs_v1') || '[]');
                 if (!Array.isArray(pinRecoveryRequests)) pinRecoveryRequests = [];
                 qotwState = JSON.parse(localStorage.getItem(STORAGE_KEYS.QOTW)) || { weekKey: '', pilotId: pilots[0]?.id || 'pilot_nicola', history: [pilots[0]?.id || 'pilot_nicola'], likes: {} };
-                currentPilotId = localStorage.getItem(STORAGE_KEYS.CURRENT_ID) || null;
+                currentPilotId = null; // All'avvio/installazione mostra sempre la schermata iniziale di login
                 deletedPilotIds = JSON.parse(localStorage.getItem('gq_deleted_pilot_ids_v1') || '[]');
                 if (!Array.isArray(deletedPilotIds)) deletedPilotIds = [];
             } catch (e) {
@@ -3013,6 +3043,12 @@
             document.getElementById('dash-market-count').textContent = `${availListings} annunci attivi nel gruppo`;
             document.getElementById('online-count-badge').textContent = `${pilots.length} Piloti`;
 
+            // Visibilità pulsante Modifica Link Social solo per Amministratore
+            const editSocBtn = document.getElementById('admin-edit-social-btn');
+            if (editSocBtn) {
+                editSocBtn.classList.toggle('hidden', !isCurrentUserAdmin());
+            }
+
             // Social Grid
             const socialGrid = document.getElementById('dashboard-social-links-grid');
             if (socialGrid) {
@@ -3156,19 +3192,62 @@
         }
 
         function openSocialLinksModal() {
-            const me = getCurrentPilot();
-            if (!me || !me.isAdmin) {
+            if (!isCurrentUserAdmin()) {
                 showToast('Solo l\'amministratore può modificare i link social ufficiali.', true);
                 return;
             }
-            const ig = socialLinks.find(s => s.id === 'soc_ig');
-            const newUrl = prompt('Aggiorna URL Instagram Ufficiale:', ig ? ig.url : 'https://www.instagram.com/gruppoquadatvitalia');
-            if (newUrl && newUrl.trim() && ig) {
-                ig.url = newUrl.trim();
-                saveState();
-                renderDashboardData();
-                showToast('Link social aggiornato!');
+            const listEl = document.getElementById('social-links-editor-list');
+            const modal = document.getElementById('social-links-modal');
+            if (!listEl || !modal) return;
+
+            listEl.innerHTML = socialLinks.map((s, idx) => `
+                <div class="bg-mud-950 border border-stone-800 rounded-2xl p-3.5 space-y-2.5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br ${escapeHtml(s.color)} text-white flex items-center justify-center shrink-0">
+                            <i class="${escapeHtml(s.icon)}"></i>
+                        </div>
+                        <span class="text-xs font-black text-white">${escapeHtml(s.name)}</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Nome / Handle visualizzato</label>
+                            <input type="text" id="soc-handle-${idx}" value="${escapeHtml(s.handle || '')}" required
+                                   class="w-full bg-mud-800 border border-stone-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-stone-400 mb-1">Link / URL Completo *</label>
+                            <input type="url" id="soc-url-${idx}" value="${escapeHtml(s.url || '')}" required placeholder="https://..."
+                                   class="w-full bg-mud-800 border border-stone-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function handleSaveSocialLinks(event) {
+            event.preventDefault();
+            if (!isCurrentUserAdmin()) {
+                showToast('Solo l\'amministratore può salvare i link social.', true);
+                return;
             }
+            socialLinks.forEach((s, idx) => {
+                const handleInp = document.getElementById(`soc-handle-${idx}`);
+                const urlInp = document.getElementById(`soc-url-${idx}`);
+                if (handleInp && handleInp.value.trim()) {
+                    s.handle = handleInp.value.trim();
+                }
+                if (urlInp && urlInp.value.trim()) {
+                    s.url = urlInp.value.trim();
+                }
+            });
+            saveState(true);
+            closeSocialLinksModal();
+            renderLoginSocialLinks();
+            renderDashboardData();
+            showToast('Tutti i link social sono stati aggiornati e sincronizzati su Cloud Live!');
         }
 
         // ==================== MAPPA AMICI ====================
@@ -4510,7 +4589,13 @@
             }
         }
         function closeProposeVideoModal() {}
-        function closeSocialLinksModal() {}
+        function closeSocialLinksModal() {
+            const modal = document.getElementById('social-links-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
         function closeRideImageLightbox() {
             const lb = document.getElementById('ride-image-lightbox');
             if (lb) {
@@ -4764,15 +4849,15 @@
             bindQotwEvents();
             renderLoginSocialLinks();
 
-            if (currentPilotId && getCurrentPilot()) {
-                enterAppShell();
-            }
+            // All'apertura/installazione dell'app mostra sempre la schermata iniziale di login
+            currentPilotId = null;
+            localStorage.removeItem(STORAGE_KEYS.CURRENT_ID);
+            document.getElementById('app-shell')?.classList.add('hidden');
+            document.getElementById('login-screen')?.classList.remove('hidden');
 
             // Sincronizzazione iniziale interna protetta; lo scaricamento manuale/completo resta riservato all'Admin
             await pullStateFromCloud(false, true);
-            if (currentPilotId && getCurrentPilot()) {
-                refreshAllViews();
-            }
+            renderLoginSocialLinks();
         });
     </script>
 </body>
